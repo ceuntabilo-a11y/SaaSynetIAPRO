@@ -1,0 +1,19 @@
+
+PASOS PARA ACTIVAR EL SCRAPING REAL:
+
+1. CREAR CUENTA EN APIFY:
+   - Ve a https://apify.com y regístrate (tienen un plan gratuito generoso).
+   - Ve a "Settings" -> "Integrations" -> Copia tu "Personal API Token".
+
+2. CONFIGURAR TU APP:
+   - Entra a tu aplicación como administrador (admin@admin.com / admin123).
+   - Verás una nueva pestaña llamada "Configuración API".
+   - Pega allí tu token de Apify y dale a "Guardar".
+
+3. PROBAR EL SCRAPER:
+   - Sal del panel de admin y entra con un código de cliente.
+   - Realiza una búsqueda (ej: "Pizzerías en Barcelona").
+   - El sistema ahora hará una petición REAL a Apify. Nota: Las búsquedas reales pueden tardar de 10 a 30 segundos dependiendo de la cantidad de resultados.
+
+PRÓXIMO PASO (FASE 3):
+¿Confirmas que el scraper está trayendo datos reales? Si es así, procederemos a crear la lógica de exportación a Excel (.xlsx) para que puedas descargar los leads.

@@ -1,0 +1,8 @@
+{
+  "name": "SaaSynetIA Scraper",
+  "description": "Una plataforma SaaS para extraer datos de negocios de Google Maps mediante Apify, con sistema de gestión de accesos por códigos temporales.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

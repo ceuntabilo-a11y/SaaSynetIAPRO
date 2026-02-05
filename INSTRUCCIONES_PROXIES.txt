@@ -1,0 +1,13 @@
+
+¡IMPORTANTE! EL ERROR DE CONEXIÓN SUELE SER POR LOS PROXIES.
+
+Para que el Scraper funcione, Apify requiere que tu cuenta tenga acceso a Proxies.
+
+1. Entra a https://console.apify.com/
+2. En el menú de la izquierda, busca "Proxy".
+3. Si es una cuenta nueva, asegúrate de haber activado el "Free Trial" (Prueba gratuita) que te pide verificar un email o tarjeta (no te cobran, pero es para evitar abusos).
+4. El Scraper de Google Maps no funciona sin proxies porque Google bloquea las IPs normales rápidamente.
+
+Si ya tienes el Trial activo y sigue fallando:
+- Verifica que el Token en el Panel de Admin NO tenga espacios al principio o al final.
+- Intenta buscar algo muy simple como "Hoteles en Madrid".
