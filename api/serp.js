@@ -25,6 +25,11 @@ export default async function handler(req, res) {
     const startRaw = body.start ?? 0;
     const start = Number(startRaw);
 
+    // z: zoom requerido por SerpApi cuando usas location
+    // (valor típico: 12-15; 14 suele ir bien para ciudades)
+    const zRaw = body.z ?? 14;
+    const z = Number(zRaw);
+
     if (!apiKey) return res.status(400).json({ error: "Missing apiKey" });
     if (!q) return res.status(400).json({ error: "Missing q" });
 
@@ -36,6 +41,10 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Invalid start" });
     }
 
+    if (!Number.isFinite(z) || z <= 0) {
+      return res.status(400).json({ error: "Invalid z" });
+    }
+
     const url =
       `https://serpapi.com/search.json` +
       `?engine=google_maps` +
@@ -43,11 +52,11 @@ export default async function handler(req, res) {
       `&location=${encodeURIComponent(location)}` +
       `&num=${encodeURIComponent(String(num))}` +
       `&start=${encodeURIComponent(String(start))}` +
+      `&z=${encodeURIComponent(String(z))}` +
       `&api_key=${encodeURIComponent(apiKey)}`;
 
     const r = await fetch(url);
 
-    // Si SerpApi falla, devolvemos texto para depurar rápido
     const text = await r.text();
     let data;
     try {
