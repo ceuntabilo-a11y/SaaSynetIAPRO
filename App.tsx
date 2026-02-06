@@ -6,6 +6,7 @@ import Dashboard from './components/Dashboard';
 import { AppView, UserSession } from './types';
 import { LayoutDashboard, ShieldCheck, LogOut, Sparkles } from 'lucide-react';
 
+
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>('login');
   const [session, setSession] = useState<UserSession | null>(null);
