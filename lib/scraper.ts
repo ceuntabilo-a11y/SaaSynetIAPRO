@@ -7,26 +7,27 @@ export type SerpSearchInput = {
   num?: number;
   start?: number;
 
-  // ✅ NUEVO: coordenadas para evitar "Unsupported location"
-  ll?: string; // "lat,lng" (ej: "40.7128,-74.0060")
-
-  // opcional
-  z?: number; // zoom
+  ll?: string; // "lat,lng"
+  z?: number;  // zoom (solo si NO hay ll)
 };
 
 export async function searchWithSerp(input: SerpSearchInput) {
+  const hasLL = Boolean(input.ll && input.ll.trim());
+
   const payload: any = {
     apiKey: input.apiKey,
     q: input.q,
     location: input.location ?? "Chile",
     num: input.num ?? 10,
     start: input.start ?? 0,
-    z: input.z ?? 14,
   };
 
-  // ✅ Si viene ll, lo mandamos también
-  if (input.ll && input.ll.trim()) {
+  // ✅ Si hay ll, mandamos ll y NO mandamos z
+  if (hasLL) {
     payload.ll = input.ll.trim();
+  } else {
+    // ✅ Solo si NO hay ll, mandamos z (porque SerpApi lo pide con location)
+    payload.z = input.z ?? 14;
   }
 
   const res = await fetch("/api/serp", {
@@ -43,10 +44,6 @@ export async function searchWithSerp(input: SerpSearchInput) {
   return res.json();
 }
 
-/**
- * Info de cuenta SerpApi.
- * (Si alguna vez diera CORS, lo pasamos a un /api/account.js, pero ahora lo dejamos así.)
- */
 export async function getSerpApiAccountInfo(apiKey: string) {
   if (!apiKey) return null;
 
