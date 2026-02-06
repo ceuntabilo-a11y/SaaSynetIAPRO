@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-  // CORS básico
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -7,28 +6,29 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
-    if (req.method !== "POST" && req.method !== "GET") {
+    if (req.method !== "POST") {
       return res.status(405).json({ error: "Method not allowed" });
     }
 
-    const body = req.method === "POST" ? (req.body || {}) : {};
+    const body = req.body || {};
 
     const apiKey = body.apiKey;
     const q = body.q;
-    const location = body.location || "Chile";
 
-    // num: cantidad por página
-    const numRaw = body.num ?? 10;
-    const num = Number(numRaw);
+    // num
+    const num = Number(body.num ?? 10);
+    // start
+    const start = Number(body.start ?? 0);
+    // z (zoom)
+    const z = Number(body.z ?? 14);
 
-    // start: offset (0, 20, 40, etc.)
-    const startRaw = body.start ?? 0;
-    const start = Number(startRaw);
+    // NUEVO:
+    // ll debe venir como string: "@lat,lng,zoomz" o "lat,lng"
+    // Ej: "-33.4489,-70.6693"
+    const ll = typeof body.ll === "string" ? body.ll.trim() : "";
 
-    // z: zoom requerido por SerpApi cuando usas location
-    // (valor típico: 12-15; 14 suele ir bien para ciudades)
-    const zRaw = body.z ?? 14;
-    const z = Number(zRaw);
+    // fallback si no hay ll
+    const location = (body.location || "Chile").toString();
 
     if (!apiKey) return res.status(400).json({ error: "Missing apiKey" });
     if (!q) return res.status(400).json({ error: "Missing q" });
@@ -36,24 +36,31 @@ export default async function handler(req, res) {
     if (!Number.isFinite(num) || num <= 0) {
       return res.status(400).json({ error: "Invalid num" });
     }
-
     if (!Number.isFinite(start) || start < 0) {
       return res.status(400).json({ error: "Invalid start" });
     }
-
     if (!Number.isFinite(z) || z <= 0) {
       return res.status(400).json({ error: "Invalid z" });
     }
 
-    const url =
+    // Armamos URL base
+    let url =
       `https://serpapi.com/search.json` +
       `?engine=google_maps` +
       `&q=${encodeURIComponent(q)}` +
-      `&location=${encodeURIComponent(location)}` +
       `&num=${encodeURIComponent(String(num))}` +
       `&start=${encodeURIComponent(String(start))}` +
       `&z=${encodeURIComponent(String(z))}` +
       `&api_key=${encodeURIComponent(apiKey)}`;
+
+    // Si viene ll, usamos ll (RECOMENDADO)
+    if (ll) {
+      // SerpApi acepta ll como "lat,lng" o "@lat,lng,zoomz"
+      url += `&ll=${encodeURIComponent(ll)}`;
+    } else {
+      // fallback: location (puede fallar en algunos formatos)
+      url += `&location=${encodeURIComponent(location)}`;
+    }
 
     const r = await fetch(url);
 
