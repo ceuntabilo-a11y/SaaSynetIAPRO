@@ -4,46 +4,91 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  // ✅ Mapa interno para convertir "Ciudad, País" -> ll
+  // (país en español, tal como tu UI lo muestra)
+  const CITY_LL = {
+    "España|Madrid": "40.4168,-3.7038",
+    "España|Barcelona": "41.3851,2.1734",
+
+    "Estados Unidos|Washington D.C.": "38.9072,-77.0369",
+    "Estados Unidos|New York": "40.7128,-74.0060",
+
+    "México|Ciudad de México": "19.4326,-99.1332",
+    "México|Monterrey": "25.6866,-100.3161",
+
+    "Argentina|Buenos Aires": "-34.6037,-58.3816",
+    "Argentina|Córdoba": "-31.4201,-64.1888",
+
+    "Colombia|Bogotá": "4.7110,-74.0721",
+    "Colombia|Medellín": "6.2442,-75.5812",
+
+    "Chile|Santiago": "-33.4489,-70.6693",
+    "Chile|Concepción": "-36.8201,-73.0444",
+
+    "Perú|Lima": "-12.0464,-77.0428",
+    "Perú|Arequipa": "-16.4090,-71.5375",
+
+    "Reino Unido|Londres": "51.5074,-0.1278",
+    "Reino Unido|Manchester": "53.4808,-2.2426",
+
+    "Francia|París": "48.8566,2.3522",
+    "Francia|Lyon": "45.7640,4.8357",
+
+    "Alemania|Berlín": "52.5200,13.4050",
+    "Alemania|Múnich": "48.1351,11.5820",
+
+    "Italia|Roma": "41.9028,12.4964",
+    "Italia|Milán": "45.4642,9.1900",
+
+    "Canadá|Ottawa": "45.4215,-75.6972",
+    "Canadá|Toronto": "43.6532,-79.3832",
+
+    "Brasil|Brasilia": "-15.7939,-47.8828",
+    "Brasil|São Paulo": "-23.5505,-46.6333",
+  };
+
+  // ✅ Convierte "New York, Estados Unidos" -> "Estados Unidos|New York"
+  const locationToKey = (locationStr) => {
+    if (!locationStr || typeof locationStr !== "string") return "";
+    const parts = locationStr.split(",").map(s => s.trim()).filter(Boolean);
+    if (parts.length < 2) return "";
+
+    const city = parts[0];
+    const country = parts[parts.length - 1];
+    return `${country}|${city}`;
+  };
 
   try {
-    if (req.method !== "POST") {
-      return res.status(405).json({ error: "Method not allowed" });
-    }
-
     const body = req.body || {};
 
     const apiKey = body.apiKey;
     const q = body.q;
 
-    // num
     const num = Number(body.num ?? 10);
-    // start
     const start = Number(body.start ?? 0);
-    // z (zoom)
     const z = Number(body.z ?? 14);
 
-    // NUEVO:
-    // ll debe venir como string: "@lat,lng,zoomz" o "lat,lng"
-    // Ej: "-33.4489,-70.6693"
-    const ll = typeof body.ll === "string" ? body.ll.trim() : "";
-
-    // fallback si no hay ll
     const location = (body.location || "Chile").toString();
+
+    // ✅ ll puede venir desde frontend
+    let ll = (typeof body.ll === "string" ? body.ll.trim() : "");
+
+    // ✅ Si NO viene ll, intentamos derivarlo desde "Ciudad, País"
+    if (!ll) {
+      const key = locationToKey(location);
+      if (key && CITY_LL[key]) ll = CITY_LL[key];
+    }
 
     if (!apiKey) return res.status(400).json({ error: "Missing apiKey" });
     if (!q) return res.status(400).json({ error: "Missing q" });
 
-    if (!Number.isFinite(num) || num <= 0) {
-      return res.status(400).json({ error: "Invalid num" });
-    }
-    if (!Number.isFinite(start) || start < 0) {
-      return res.status(400).json({ error: "Invalid start" });
-    }
-    if (!Number.isFinite(z) || z <= 0) {
-      return res.status(400).json({ error: "Invalid z" });
-    }
+    if (!Number.isFinite(num) || num <= 0) return res.status(400).json({ error: "Invalid num" });
+    if (!Number.isFinite(start) || start < 0) return res.status(400).json({ error: "Invalid start" });
+    if (!Number.isFinite(z) || z <= 0) return res.status(400).json({ error: "Invalid z" });
 
-    // Armamos URL base
+    // Base
     let url =
       `https://serpapi.com/search.json` +
       `?engine=google_maps` +
@@ -53,24 +98,19 @@ export default async function handler(req, res) {
       `&z=${encodeURIComponent(String(z))}` +
       `&api_key=${encodeURIComponent(apiKey)}`;
 
-    // Si viene ll, usamos ll (RECOMENDADO)
+    // ✅ Si tenemos ll, usamos ll y NO mandamos location
     if (ll) {
-      // SerpApi acepta ll como "lat,lng" o "@lat,lng,zoomz"
       url += `&ll=${encodeURIComponent(ll)}`;
     } else {
-      // fallback: location (puede fallar en algunos formatos)
+      // fallback (puede fallar en algunos formatos, pero ya intentamos ll antes)
       url += `&location=${encodeURIComponent(location)}`;
     }
 
     const r = await fetch(url);
-
     const text = await r.text();
+
     let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = { raw: text };
-    }
+    try { data = JSON.parse(text); } catch { data = { raw: text }; }
 
     return res.status(r.status).json(data);
   } catch (e) {
