@@ -1,21 +1,33 @@
 // lib/scraper.ts
 
 export type SerpSearchInput = {
-  apiKey: string;        // la pega el usuario en Motor API
-  q: string;             // keyword/nicho
-  location?: string;     // ej: "Chile" o "Santiago, Chile"
-  num?: number;          // cantidad de resultados
-  start?: number;        // paginación: 0, 20, 40...
+  apiKey: string;
+  q: string;
+  location?: string;
+  num?: number;
+  start?: number;
+
+  // ✅ NUEVO: coordenadas para evitar "Unsupported location"
+  ll?: string; // "lat,lng" (ej: "40.7128,-74.0060")
+
+  // opcional
+  z?: number; // zoom
 };
 
 export async function searchWithSerp(input: SerpSearchInput) {
-  const payload = {
+  const payload: any = {
     apiKey: input.apiKey,
     q: input.q,
     location: input.location ?? "Chile",
     num: input.num ?? 10,
     start: input.start ?? 0,
+    z: input.z ?? 14,
   };
+
+  // ✅ Si viene ll, lo mandamos también
+  if (input.ll && input.ll.trim()) {
+    payload.ll = input.ll.trim();
+  }
 
   const res = await fetch("/api/serp", {
     method: "POST",
@@ -32,10 +44,8 @@ export async function searchWithSerp(input: SerpSearchInput) {
 }
 
 /**
- * Obtiene info de cuenta SerpApi (saldo/plan).
- * Esto NO pasa por /api/serp porque es un endpoint distinto de SerpApi.
- * Si te diera CORS en producción, lo metemos luego en /api/account.js,
- * pero primero dejemos el build en verde.
+ * Info de cuenta SerpApi.
+ * (Si alguna vez diera CORS, lo pasamos a un /api/account.js, pero ahora lo dejamos así.)
  */
 export async function getSerpApiAccountInfo(apiKey: string) {
   if (!apiKey) return null;
@@ -47,9 +57,6 @@ export async function getSerpApiAccountInfo(apiKey: string) {
     if (!r.ok) return null;
     const data = await r.json();
 
-    // Normalizamos a lo que tu Dashboard espera:
-    // info.planSearchesLeft / info.searchesPerMonth
-    // Si SerpApi cambia nombres, esto evita que explote.
     const planSearchesLeft =
       data?.plan_searches_left ??
       data?.planSearchesLeft ??
