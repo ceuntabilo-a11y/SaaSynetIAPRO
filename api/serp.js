@@ -6,8 +6,6 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  // ✅ Mapa interno para convertir "Ciudad, País" -> ll
-  // (país en español, tal como tu UI lo muestra)
   const CITY_LL = {
     "España|Madrid": "40.4168,-3.7038",
     "España|Barcelona": "41.3851,2.1734",
@@ -49,12 +47,10 @@ export default async function handler(req, res) {
     "Brasil|São Paulo": "-23.5505,-46.6333",
   };
 
-  // ✅ Convierte "New York, Estados Unidos" -> "Estados Unidos|New York"
   const locationToKey = (locationStr) => {
     if (!locationStr || typeof locationStr !== "string") return "";
     const parts = locationStr.split(",").map(s => s.trim()).filter(Boolean);
     if (parts.length < 2) return "";
-
     const city = parts[0];
     const country = parts[parts.length - 1];
     return `${country}|${city}`;
@@ -68,25 +64,26 @@ export default async function handler(req, res) {
 
     const num = Number(body.num ?? 10);
     const start = Number(body.start ?? 0);
-    const z = Number(body.z ?? 14);
 
     const location = (body.location || "Chile").toString();
 
-    // ✅ ll puede venir desde frontend
+    // ll puede venir desde frontend
     let ll = (typeof body.ll === "string" ? body.ll.trim() : "");
 
-    // ✅ Si NO viene ll, intentamos derivarlo desde "Ciudad, País"
+    // Si NO viene ll, intentamos derivarlo desde "Ciudad, País"
     if (!ll) {
       const key = locationToKey(location);
       if (key && CITY_LL[key]) ll = CITY_LL[key];
     }
+
+    // z SOLO se usa si NO hay ll
+    const z = Number(body.z ?? 14);
 
     if (!apiKey) return res.status(400).json({ error: "Missing apiKey" });
     if (!q) return res.status(400).json({ error: "Missing q" });
 
     if (!Number.isFinite(num) || num <= 0) return res.status(400).json({ error: "Invalid num" });
     if (!Number.isFinite(start) || start < 0) return res.status(400).json({ error: "Invalid start" });
-    if (!Number.isFinite(z) || z <= 0) return res.status(400).json({ error: "Invalid z" });
 
     // Base
     let url =
@@ -95,15 +92,17 @@ export default async function handler(req, res) {
       `&q=${encodeURIComponent(q)}` +
       `&num=${encodeURIComponent(String(num))}` +
       `&start=${encodeURIComponent(String(start))}` +
-      `&z=${encodeURIComponent(String(z))}` +
       `&api_key=${encodeURIComponent(apiKey)}`;
 
-    // ✅ Si tenemos ll, usamos ll y NO mandamos location
+    // ✅ Reglas SerpApi:
+    // - Si hay ll: NO usar z ni location
+    // - Si no hay ll: usar location + z
     if (ll) {
       url += `&ll=${encodeURIComponent(ll)}`;
     } else {
-      // fallback (puede fallar en algunos formatos, pero ya intentamos ll antes)
+      if (!Number.isFinite(z) || z <= 0) return res.status(400).json({ error: "Invalid z" });
       url += `&location=${encodeURIComponent(location)}`;
+      url += `&z=${encodeURIComponent(String(z))}`;
     }
 
     const r = await fetch(url);
