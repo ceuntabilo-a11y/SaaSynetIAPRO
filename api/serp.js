@@ -6,7 +6,8 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const CITY_LL = {
+  // Mapa "País|Ciudad" -> "lat,lng"
+  const CITY_LL_RAW = {
     "España|Madrid": "40.4168,-3.7038",
     "España|Barcelona": "41.3851,2.1734",
 
@@ -56,6 +57,22 @@ export default async function handler(req, res) {
     return `${country}|${city}`;
   };
 
+  const toSerpLL = (raw, zoom) => {
+    const s = (raw || "").trim();
+    if (!s) return "";
+
+    // si ya viene en formato @..., ... ,...z
+    if (s.startsWith("@") && s.includes("z")) return s;
+
+    // si viene como lat,lng
+    const parts = s.split(",").map(x => x.trim());
+    if (parts.length < 2) return "";
+
+    const lat = parts[0];
+    const lng = parts[1];
+    return `@${lat},${lng},${zoom}z`;
+  };
+
   try {
     const body = req.body || {};
 
@@ -67,25 +84,25 @@ export default async function handler(req, res) {
 
     const location = (body.location || "Chile").toString();
 
-    // ll puede venir desde frontend
-    let ll = (typeof body.ll === "string" ? body.ll.trim() : "");
-
-    // Si NO viene ll, intentamos derivarlo desde "Ciudad, País"
-    if (!ll) {
-      const key = locationToKey(location);
-      if (key && CITY_LL[key]) ll = CITY_LL[key];
-    }
-
     // z SOLO se usa si NO hay ll
     const z = Number(body.z ?? 14);
 
+    // ll puede venir desde frontend
+    let ll = (typeof body.ll === "string" ? body.ll.trim() : "");
+
+    // Si NO viene ll, lo intentamos derivar desde location
+    if (!ll) {
+      const key = locationToKey(location);
+      if (key && CITY_LL_RAW[key]) {
+        ll = CITY_LL_RAW[key]; // aquí es "lat,lng"
+      }
+    }
+
     if (!apiKey) return res.status(400).json({ error: "Missing apiKey" });
     if (!q) return res.status(400).json({ error: "Missing q" });
-
     if (!Number.isFinite(num) || num <= 0) return res.status(400).json({ error: "Invalid num" });
     if (!Number.isFinite(start) || start < 0) return res.status(400).json({ error: "Invalid start" });
 
-    // Base
     let url =
       `https://serpapi.com/search.json` +
       `?engine=google_maps` +
@@ -94,11 +111,11 @@ export default async function handler(req, res) {
       `&start=${encodeURIComponent(String(start))}` +
       `&api_key=${encodeURIComponent(apiKey)}`;
 
-    // ✅ Reglas SerpApi:
-    // - Si hay ll: NO usar z ni location
-    // - Si no hay ll: usar location + z
+    // ✅ REGLA: ll y z NO juntos
     if (ll) {
-      url += `&ll=${encodeURIComponent(ll)}`;
+      const llFormatted = toSerpLL(ll, 14);
+      if (!llFormatted) return res.status(400).json({ error: "Invalid ll format (after formatting)" });
+      url += `&ll=${encodeURIComponent(llFormatted)}`;
     } else {
       if (!Number.isFinite(z) || z <= 0) return res.status(400).json({ error: "Invalid z" });
       url += `&location=${encodeURIComponent(location)}`;
