@@ -1,8 +1,30 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, MapPin, Loader2, Download, Table, Phone, Globe, ExternalLink, AlertTriangle, Briefcase, Map, CheckCircle2, Sparkles, BrainCircuit, Star, History, X, Copy, Check, Edit2, List, Database, FilterX, PlusCircle, Trash2 } from 'lucide-react';
+import {
+  Search,
+  MapPin,
+  Loader2,
+  Download,
+  Phone,
+  Globe,
+  ExternalLink,
+  AlertTriangle,
+  CheckCircle2,
+  Sparkles,
+  BrainCircuit,
+  Star,
+  History,
+  X,
+  Copy,
+  Check,
+  Edit2,
+  List,
+  Database,
+  FilterX,
+  PlusCircle,
+  Trash2
+} from 'lucide-react';
 import { BusinessData, ScraperSettings } from '../types';
-import { runGoogleMapsScraper, getSerpApiAccountInfo } from '../lib/scraper';
+import { getSerpApiAccountInfo, searchWithSerp } from '../lib/scraper';
 import { enrichLeadsWithAI } from '../lib/ai';
 
 const NICHES_DATA: Record<string, string[]> = {
@@ -37,14 +59,14 @@ const Dashboard: React.FC = () => {
   const [country, setCountry] = useState<string>('');
   const [city, setCity] = useState<string>('');
   const [maxLeads, setMaxLeads] = useState<number>(20);
-  
+
   // Paginación y Memoria
   const [currentOffset, setCurrentOffset] = useState<number>(0);
   const [lastQuery, setLastQuery] = useState<string>('');
   const [sessionLeadsHistory, setSessionLeadsHistory] = useState<Set<string>>(new Set());
   const [filteredCount, setFilteredCount] = useState<number>(0);
 
-  const [accountBalance, setAccountBalance] = useState<{left: number, total: number} | null>(null);
+  const [accountBalance, setAccountBalance] = useState<{ left: number, total: number } | null>(null);
 
   const [isManualNiche, setIsManualNiche] = useState(false);
   const [isManualSpecialty, setIsManualSpecialty] = useState(false);
@@ -53,7 +75,7 @@ const Dashboard: React.FC = () => {
 
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  
+
   const [isScraping, setIsScraping] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
   const [scrapeStatus, setScrapeStatus] = useState<string>('');
@@ -86,13 +108,17 @@ const Dashboard: React.FC = () => {
   }, [selectedLeadIndex, results]);
 
   const fetchBalance = async () => {
-    const savedSettings = localStorage.getItem('scraper_settings');
-    if (savedSettings) {
-      const { apiKey }: ScraperSettings = JSON.parse(savedSettings);
-      const info = await getSerpApiAccountInfo(apiKey);
-      if (info) {
-        setAccountBalance({ left: info.planSearchesLeft, total: info.searchesPerMonth });
+    try {
+      const savedSettings = localStorage.getItem('scraper_settings');
+      if (savedSettings) {
+        const { apiKey }: ScraperSettings = JSON.parse(savedSettings);
+        const info = await getSerpApiAccountInfo(apiKey);
+        if (info) {
+          setAccountBalance({ left: info.planSearchesLeft, total: info.searchesPerMonth });
+        }
       }
+    } catch {
+      // silencio para no romper UI si falla balance
     }
   };
 
@@ -115,37 +141,124 @@ const Dashboard: React.FC = () => {
     return `${name}|${phone}|${address}`;
   };
 
+  // Construye un link de Google Maps aunque SerpApi no lo entregue
+  const buildGoogleMapsLink = (name?: string, address?: string) => {
+    const q = `${name || ''} ${address || ''}`.trim();
+    if (!q) return 'https://www.google.com/maps';
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+  };
+
+  // Convierte respuesta de SerpApi (google_maps engine) a tu BusinessData[]
+  const normalizeSerpToBusinessData = (serpResponse: any): BusinessData[] => {
+    const local = Array.isArray(serpResponse?.local_results) ? serpResponse.local_results : [];
+    const out: BusinessData[] = local.map((r: any) => {
+      const name = r?.title || r?.name || '';
+      const address = r?.address || r?.full_address || '';
+      const phone = r?.phone || r?.phone_number || '';
+      const website = r?.website || r?.website_link || '';
+      const rating = r?.rating ?? r?.stars ?? null;
+      const reviews = r?.reviews ?? r?.reviews_count ?? null;
+
+      // Algunas respuestas traen link directo, otras no.
+      const url =
+        r?.place_link ||
+        r?.links?.place_link ||
+        r?.gps_coordinates?.link ||
+        buildGoogleMapsLink(name, address);
+
+      const categoryName = r?.type || r?.category || r?.categoryName || '';
+
+      return {
+        name,
+        phone: phone || '',
+        website: website || '',
+        address: address || '',
+        fullAddress: address || '',
+        categoryName: categoryName || '',
+        url: url || buildGoogleMapsLink(name, address),
+        stars: rating != null ? String(rating) : undefined,
+        reviewsCount: reviews != null ? String(reviews) : undefined,
+      } as BusinessData;
+    });
+
+    return out.filter(x => (x.name || '').trim().length > 0);
+  };
+
+  // Si el usuario usa historial ("X en Y"), lo separamos en q y location
+  const splitQueryIfContainsEn = (text: string) => {
+    const marker = ' en ';
+    const idx = text.toLowerCase().lastIndexOf(marker);
+    if (idx === -1) return { q: text.trim(), location: '' };
+    const q = text.slice(0, idx).trim();
+    const location = text.slice(idx + marker.length).trim();
+    return { q, location };
+  };
+
   const handleScrape = async (e?: React.FormEvent, customQuery?: string, isLoadMore: boolean = false) => {
     if (e) e.preventDefault();
-    
+
     const nichePart = selectedSpecialty || selectedNiche;
     const locationPart = city && country ? `${city}, ${country}` : (city || country);
+
     const finalQuery = customQuery || `${nichePart} en ${locationPart}`;
-    
+
     setError(null);
+
     if (!isLoadMore) {
-        setResults([]);
-        setCurrentOffset(0);
-        setFilteredCount(0);
-        setSelectedLeadIndex(null);
+      setResults([]);
+      setCurrentOffset(0);
+      setFilteredCount(0);
+      setSelectedLeadIndex(null);
     }
-    
+
     setIsScraping(true);
     setLastQuery(finalQuery);
     if (!isLoadMore) saveToHistory(finalQuery);
-    
-    const offsetToUse = isLoadMore ? currentOffset + 20 : 0;
+
+    // offset: usamos maxLeads como tamaño de página
+    const offsetToUse = isLoadMore ? currentOffset + maxLeads : 0;
 
     try {
       const savedSettings = localStorage.getItem('scraper_settings');
       if (!savedSettings) throw new Error("Configura la API Key en el Panel Admin.");
       const { apiKey }: ScraperSettings = JSON.parse(savedSettings);
-      
-      const rawData = await runGoogleMapsScraper(apiKey, finalQuery, maxLeads, offsetToUse, (status) => setScrapeStatus(status));
-      
+
+      // Status UI
+      setScrapeStatus(isLoadMore ? "Cargando más resultados..." : "Consultando Google Maps...");
+
+      // Para SerpApi es mejor separar q y location
+      let qToUse = nichePart;
+      let locationToUse = locationPart;
+
+      if (customQuery) {
+        const split = splitQueryIfContainsEn(customQuery);
+        qToUse = split.q || nichePart;
+        locationToUse = split.location || locationPart;
+      }
+
+      if (!qToUse || !qToUse.trim()) {
+        throw new Error("Debes seleccionar un sector o escribir uno manualmente.");
+      }
+      if (!locationToUse || !locationToUse.trim()) {
+        throw new Error("Debes seleccionar una ciudad/país o escribirlo manualmente.");
+      }
+
+      // ✅ ESTA ES LA LLAMADA ÚNICA: frontend -> /api/serp
+      // Nota: mandamos start por si lo soportas en backend más adelante (si no, no rompe)
+      const serpResponse = await searchWithSerp({
+        apiKey,
+        q: qToUse,
+        location: locationToUse,
+        num: maxLeads,
+        // @ts-ignore - si tu tipo no tiene start todavía, lo ignora TS
+        start: offsetToUse,
+      });
+
+      const rawData: BusinessData[] = normalizeSerpToBusinessData(serpResponse);
+
       if (rawData.length === 0) {
-          if (isLoadMore) throw new Error("No hay más resultados disponibles para esta búsqueda.");
-          else throw new Error("No se encontraron resultados.");
+        if (isLoadMore) throw new Error("No hay más resultados disponibles para esta búsqueda.");
+        throw new Error("No se encontraron resultados.");
       }
 
       const newLeadsBatch: BusinessData[] = [];
@@ -170,9 +283,10 @@ const Dashboard: React.FC = () => {
       setFilteredCount(prev => isLoadMore ? prev + duplicatesFound : duplicatesFound);
       setResults(prev => isLoadMore ? [...prev, ...newLeadsBatch] : newLeadsBatch);
       setCurrentOffset(offsetToUse);
+
       fetchBalance();
     } catch (err: any) {
-      setError(err.message);
+      setError(err?.message || 'Error desconocido');
     } finally {
       setIsScraping(false);
       setScrapeStatus('');
@@ -185,17 +299,19 @@ const Dashboard: React.FC = () => {
     try {
       const enrichedData = await enrichLeadsWithAI(results);
       setResults(enrichedData);
-    } catch (err) { console.error(err); }
-    finally { setIsEnriching(false); setScrapeStatus(""); }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsEnriching(false);
+      setScrapeStatus("");
+    }
   };
 
-  // Función para eliminar un lead individualmente de la vista activa por su índice (Sin confirmación para mayor agilidad)
   const deleteIndividualLead = (index: number) => {
     setResults(prev => prev.filter((_, i) => i !== index));
     if (selectedLeadIndex === index) setSelectedLeadIndex(null);
   };
 
-  // Función para limpiar todos los resultados de la vista
   const clearResults = () => {
     if (results.length === 0) return;
     if (window.confirm("¿Confirmas limpiar toda la pantalla de resultados? (El sistema recordará estos leads para no repetirlos en nuevas búsquedas de esta sesión)")) {
@@ -209,7 +325,7 @@ const Dashboard: React.FC = () => {
     const headers = ["Nombre", "Teléfono", "Web", "Dirección", "Categoría", "IA Score", "Análisis IA"];
     const rows = results.map(item => [
       `"${item.name}"`, `"${item.phone || ''}"`, `"${item.website || ''}"`,
-      `"${item.address || ''}"`, `"${item.categoryName || ''}"`, 
+      `"${item.address || ''}"`, `"${item.categoryName || ''}"`,
       `"${item.aiScore || 'N/A'}"`, `"${item.aiSummary || 'N/A'}"`
     ]);
     const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(";")).join("\n");
@@ -226,11 +342,18 @@ const Dashboard: React.FC = () => {
         <div className="text-center md:text-left space-y-2">
           <h1 className="text-4xl font-black text-slate-800 tracking-tight flex items-center justify-center md:justify-start gap-3">
             <div className="bg-indigo-600 p-2 rounded-2xl shadow-lg shadow-indigo-200">
-               <Sparkles className="w-8 h-8 text-white" />
+              <Sparkles className="w-8 h-8 text-white" />
             </div>
             SaaSynetIA <span className="text-indigo-600">Scraper</span>
           </h1>
-          <p className="text-slate-500 font-medium">Motor de extracción ultra-rápido impulsado por SerpApi e IA</p>
+          <p className="text-slate-500 font-medium">
+            Motor de extracción ultra-rápido impulsado por SerpApi e IA
+          </p>
+          {scrapeStatus && (
+            <p className="text-xs font-black text-indigo-600">
+              {scrapeStatus}
+            </p>
+          )}
         </div>
 
         {accountBalance && (
@@ -256,14 +379,28 @@ const Dashboard: React.FC = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Sector</label>
-                <button type="button" onClick={() => setIsManualNiche(!isManualNiche)} className="text-indigo-500 hover:text-indigo-700 p-1">
+                <button
+                  type="button"
+                  onClick={() => setIsManualNiche(!isManualNiche)}
+                  className="text-indigo-500 hover:text-indigo-700 p-1"
+                >
                   {isManualNiche ? <List className="w-3.5 h-3.5" /> : <Edit2 className="w-3.5 h-3.5" />}
                 </button>
               </div>
               {isManualNiche ? (
-                <input type="text" className="w-full p-4 bg-slate-50 border-2 border-indigo-100 rounded-2xl outline-none font-semibold text-slate-700" placeholder="Escribe el sector..." value={selectedNiche} onChange={(e) => setSelectedNiche(e.target.value)} />
+                <input
+                  type="text"
+                  className="w-full p-4 bg-slate-50 border-2 border-indigo-100 rounded-2xl outline-none font-semibold text-slate-700"
+                  placeholder="Escribe el sector..."
+                  value={selectedNiche}
+                  onChange={(e) => setSelectedNiche(e.target.value)}
+                />
               ) : (
-                <select className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-semibold text-slate-700" value={selectedNiche} onChange={(e) => setSelectedNiche(e.target.value)}>
+                <select
+                  className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-semibold text-slate-700"
+                  value={selectedNiche}
+                  onChange={(e) => setSelectedNiche(e.target.value)}
+                >
                   <option value="">Selecciona Nicho</option>
                   {Object.keys(NICHES_DATA).map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
@@ -273,14 +410,29 @@ const Dashboard: React.FC = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Especialidad</label>
-                <button type="button" onClick={() => setIsManualSpecialty(!isManualSpecialty)} className="text-indigo-500 hover:text-indigo-700 p-1">
+                <button
+                  type="button"
+                  onClick={() => setIsManualSpecialty(!isManualSpecialty)}
+                  className="text-indigo-500 hover:text-indigo-700 p-1"
+                >
                   {isManualSpecialty ? <List className="w-3.5 h-3.5" /> : <Edit2 className="w-3.5 h-3.5" />}
                 </button>
               </div>
               {isManualSpecialty ? (
-                <input type="text" className="w-full p-4 bg-slate-50 border-2 border-indigo-100 rounded-2xl outline-none font-semibold text-slate-700" placeholder="Escribe especialidad..." value={selectedSpecialty} onChange={(e) => setSelectedSpecialty(e.target.value)} />
+                <input
+                  type="text"
+                  className="w-full p-4 bg-slate-50 border-2 border-indigo-100 rounded-2xl outline-none font-semibold text-slate-700"
+                  placeholder="Escribe especialidad..."
+                  value={selectedSpecialty}
+                  onChange={(e) => setSelectedSpecialty(e.target.value)}
+                />
               ) : (
-                <select className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-semibold text-slate-700 disabled:opacity-40" value={selectedSpecialty} onChange={(e) => setSelectedSpecialty(e.target.value)} disabled={!selectedNiche}>
+                <select
+                  className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-semibold text-slate-700 disabled:opacity-40"
+                  value={selectedSpecialty}
+                  onChange={(e) => setSelectedSpecialty(e.target.value)}
+                  disabled={!selectedNiche}
+                >
                   <option value="">Todo el sector</option>
                   {specialties.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -290,14 +442,28 @@ const Dashboard: React.FC = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest">País</label>
-                <button type="button" onClick={() => setIsManualCountry(!isManualCountry)} className="text-indigo-500 hover:text-indigo-700 p-1">
+                <button
+                  type="button"
+                  onClick={() => setIsManualCountry(!isManualCountry)}
+                  className="text-indigo-500 hover:text-indigo-700 p-1"
+                >
                   {isManualCountry ? <List className="w-3.5 h-3.5" /> : <Edit2 className="w-3.5 h-3.5" />}
                 </button>
               </div>
               {isManualCountry ? (
-                <input type="text" className="w-full p-4 bg-slate-50 border-2 border-indigo-100 rounded-2xl outline-none font-semibold text-slate-700" placeholder="Escribe el país..." value={country} onChange={(e) => setCountry(e.target.value)} />
+                <input
+                  type="text"
+                  className="w-full p-4 bg-slate-50 border-2 border-indigo-100 rounded-2xl outline-none font-semibold text-slate-700"
+                  placeholder="Escribe el país..."
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                />
               ) : (
-                <select className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-semibold text-slate-700" value={country} onChange={(e) => setCountry(e.target.value)}>
+                <select
+                  className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-semibold text-slate-700"
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                >
                   <option value="">Selecciona País</option>
                   {Object.keys(COUNTRIES_CITIES).map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
@@ -307,14 +473,29 @@ const Dashboard: React.FC = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Ciudad</label>
-                <button type="button" onClick={() => setIsManualCity(!isManualCity)} className="text-indigo-500 hover:text-indigo-700 p-1">
+                <button
+                  type="button"
+                  onClick={() => setIsManualCity(!isManualCity)}
+                  className="text-indigo-500 hover:text-indigo-700 p-1"
+                >
                   {isManualCity ? <List className="w-3.5 h-3.5" /> : <Edit2 className="w-3.5 h-3.5" />}
                 </button>
               </div>
               {isManualCity ? (
-                <input type="text" className="w-full p-4 bg-slate-50 border-2 border-indigo-100 rounded-2xl outline-none font-semibold text-slate-700" placeholder="Escribe la ciudad..." value={city} onChange={(e) => setCity(e.target.value)} />
+                <input
+                  type="text"
+                  className="w-full p-4 bg-slate-50 border-2 border-indigo-100 rounded-2xl outline-none font-semibold text-slate-700"
+                  placeholder="Escribe la ciudad..."
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                />
               ) : (
-                <select className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-semibold text-slate-700 disabled:opacity-40" value={city} onChange={(e) => setCity(e.target.value)} disabled={!country}>
+                <select
+                  className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-semibold text-slate-700 disabled:opacity-40"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  disabled={!country}
+                >
                   <option value="">Selecciona Ciudad</option>
                   {availableCities.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
@@ -327,14 +508,23 @@ const Dashboard: React.FC = () => {
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cantidad por página</label>
               <div className="flex items-center bg-slate-100 rounded-2xl p-1 gap-1">
                 {[10, 20].map(val => (
-                  <button key={val} type="button" onClick={() => setMaxLeads(val)} className={`px-5 py-2 rounded-xl text-xs font-black transition-all ${maxLeads === val ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white'}`}>
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setMaxLeads(val)}
+                    className={`px-5 py-2 rounded-xl text-xs font-black transition-all ${maxLeads === val ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white'}`}
+                  >
                     {val}
                   </button>
                 ))}
               </div>
             </div>
 
-            <button type="submit" disabled={isScraping || isEnriching || (!selectedNiche && !isManualNiche) || (!city && !isManualCity)} className="group relative bg-slate-900 text-white px-16 py-5 rounded-2xl font-black text-lg flex items-center gap-4 hover:bg-indigo-600 shadow-2xl disabled:opacity-50 transition-all active:scale-95">
+            <button
+              type="submit"
+              disabled={isScraping || isEnriching || (!selectedNiche && !isManualNiche) || (!city && !isManualCity)}
+              className="group relative bg-slate-900 text-white px-16 py-5 rounded-2xl font-black text-lg flex items-center gap-4 hover:bg-indigo-600 shadow-2xl disabled:opacity-50 transition-all active:scale-95"
+            >
               {isScraping ? <Loader2 className="w-6 h-6 animate-spin text-indigo-400" /> : <Search className="w-6 h-6 group-hover:scale-110 transition" />}
               <span>{isScraping ? "Extrayendo..." : "Iniciar Extracción Única"}</span>
             </button>
@@ -342,9 +532,18 @@ const Dashboard: React.FC = () => {
 
           {searchHistory.length > 0 && (
             <div className="flex flex-wrap items-center justify-center gap-3 pt-4 border-t border-slate-50">
-              <span className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-1"> <History className="w-3 h-3" /> Recientes: </span>
+              <span className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-1">
+                <History className="w-3 h-3" /> Recientes:
+              </span>
               {searchHistory.map((q, i) => (
-                <button key={i} type="button" onClick={() => handleScrape(undefined, q)} className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-bold hover:bg-indigo-100 transition"> {q.split(' en ')[0]}... </button>
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => handleScrape(undefined, q)}
+                  className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-bold hover:bg-indigo-100 transition"
+                >
+                  {q.split(' en ')[0]}...
+                </button>
               ))}
             </div>
           )}
@@ -365,29 +564,40 @@ const Dashboard: React.FC = () => {
         <div className="space-y-8 animate-slideUp">
           <div className="flex flex-col md:flex-row justify-between items-end gap-6">
             <div className="space-y-1">
-               <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
-                 <CheckCircle2 className="w-6 h-6 text-emerald-500" /> Base de Leads ({results.length})
-               </h3>
-               <div className="flex items-center gap-4">
-                 <p className="text-slate-500 text-sm font-medium">Prospectos acumulados en esta sesión. Doble clic para seleccionar y Suprimir para borrar.</p>
-                 {filteredCount > 0 && (
-                   <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-black uppercase border border-amber-100">
-                     <FilterX className="w-3 h-3" /> {filteredCount} duplicados omitidos
-                   </span>
-                 )}
-               </div>
+              <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
+                <CheckCircle2 className="w-6 h-6 text-emerald-500" /> Base de Leads ({results.length})
+              </h3>
+              <div className="flex items-center gap-4">
+                <p className="text-slate-500 text-sm font-medium">
+                  Prospectos acumulados en esta sesión. Doble clic para seleccionar y Suprimir para borrar.
+                </p>
+                {filteredCount > 0 && (
+                  <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-black uppercase border border-amber-100">
+                    <FilterX className="w-3 h-3" /> {filteredCount} duplicados omitidos
+                  </span>
+                )}
+              </div>
             </div>
+
             <div className="flex flex-wrap gap-3 w-full md:w-auto">
-              <button onClick={handleAIEnrichment} disabled={isEnriching || isScraping} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white px-6 py-4 rounded-2xl font-black text-sm disabled:opacity-50 transition-all hover:shadow-lg">
+              <button
+                onClick={handleAIEnrichment}
+                disabled={isEnriching || isScraping}
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white px-6 py-4 rounded-2xl font-black text-sm disabled:opacity-50 transition-all hover:shadow-lg"
+              >
                 <BrainCircuit className="w-5 h-5" /> {isEnriching ? "IA Pensando..." : "Enriquecer con IA"}
               </button>
-              <button onClick={exportToExcel} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-emerald-500 text-white px-6 py-4 rounded-2xl font-black text-sm transition-all hover:shadow-lg">
+
+              <button
+                onClick={exportToExcel}
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-emerald-500 text-white px-6 py-4 rounded-2xl font-black text-sm transition-all hover:shadow-lg"
+              >
                 <Download className="w-5 h-5" /> Exportar
               </button>
-              
-              <button 
+
+              <button
                 type="button"
-                onClick={clearResults} 
+                onClick={clearResults}
                 disabled={results.length === 0 || isScraping}
                 className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-rose-50 text-rose-600 hover:bg-rose-100 disabled:opacity-40 disabled:cursor-not-allowed border border-rose-200 px-6 py-4 rounded-2xl font-black text-sm transition-all active:scale-95 shadow-sm"
               >
@@ -402,15 +612,14 @@ const Dashboard: React.FC = () => {
               const cardId = `lead-card-${idx}`;
               const cardKey = `${leadUniqueId}-${idx}`;
               const isSelected = selectedLeadIndex === idx;
-              
+
               return (
-                <div 
-                  key={cardKey} 
+                <div
+                  key={cardKey}
                   onDoubleClick={() => setSelectedLeadIndex(isSelected ? null : idx)}
                   className={`p-8 rounded-[2rem] border-2 transition-all group relative flex flex-col h-full overflow-hidden cursor-pointer ${isSelected ? 'bg-indigo-50/30 border-indigo-500 shadow-2xl ring-4 ring-indigo-100 scale-[1.02]' : 'bg-white border-slate-100 shadow-sm hover:shadow-xl'}`}
                 >
-                  {/* Botón X Individual Habilitado e Inmediato */}
-                  <button 
+                  <button
                     type="button"
                     onClick={(e) => {
                       e.preventDefault();
@@ -424,10 +633,15 @@ const Dashboard: React.FC = () => {
                   </button>
 
                   {item.aiScore && (
-                    <div className={`absolute top-0 left-0 px-5 py-2 text-[10px] font-black uppercase rounded-tl-[2rem] rounded-br-2xl ${item.aiScore === 'Premium' ? 'bg-amber-400 text-white' : 'bg-slate-800 text-white'}`}> {item.aiScore} Lead </div>
+                    <div className={`absolute top-0 left-0 px-5 py-2 text-[10px] font-black uppercase rounded-tl-[2rem] rounded-br-2xl ${item.aiScore === 'Premium' ? 'bg-amber-400 text-white' : 'bg-slate-800 text-white'}`}>
+                      {item.aiScore} Lead
+                    </div>
                   )}
+
                   <div className="mb-6 pt-4">
-                    <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl uppercase tracking-widest"> {item.categoryName} </span>
+                    <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl uppercase tracking-widest">
+                      {item.categoryName}
+                    </span>
                     <h4 className="text-xl font-black text-slate-800 line-clamp-2 mt-4 leading-tight">{item.name}</h4>
                     {item.stars && (
                       <div className="flex items-center gap-1.5 mt-2">
@@ -437,36 +651,65 @@ const Dashboard: React.FC = () => {
                       </div>
                     )}
                   </div>
+
                   <div className="space-y-4 text-sm flex-grow">
                     <div className="flex items-start gap-3 text-slate-500">
                       <MapPin className="w-5 h-5 shrink-0 text-slate-300" />
                       <span className="text-xs font-medium">{item.address || item.fullAddress}</span>
                     </div>
+
                     {item.phone && item.phone !== "No disponible" && (
                       <div className="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-transparent hover:border-indigo-100 hover:bg-white transition-all group/phone">
                         <div className="flex items-center gap-3">
                           <Phone className="w-4 h-4 text-indigo-500" />
-                          <a href={`tel:${item.phone}`} className="text-sm font-black tracking-tight text-slate-800 hover:text-indigo-600 transition-colors">
+                          <a
+                            href={`tel:${item.phone}`}
+                            className="text-sm font-black tracking-tight text-slate-800 hover:text-indigo-600 transition-colors"
+                          >
                             {item.phone}
                           </a>
                         </div>
-                        <button onClick={(e) => { e.stopPropagation(); handleCopyPhone(item.phone || '', cardId); }} className="p-2 text-slate-300 hover:text-indigo-500 transition-colors">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleCopyPhone(item.phone || '', cardId); }}
+                          className="p-2 text-slate-300 hover:text-indigo-500 transition-colors"
+                        >
                           {copiedId === cardId ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                         </button>
                       </div>
                     )}
                   </div>
+
                   {item.aiSummary && (
                     <div className="mt-6 bg-violet-50 p-5 rounded-3xl border border-violet-100">
-                      <p className="text-[10px] font-black text-violet-600 uppercase mb-2"> Análisis Gemini </p>
+                      <p className="text-[10px] font-black text-violet-600 uppercase mb-2">Análisis Gemini</p>
                       <p className="text-xs text-violet-900 italic font-bold">"{item.aiSummary}"</p>
                     </div>
                   )}
+
                   <div className="flex items-center justify-between pt-6 mt-6 border-t border-slate-50">
                     {item.website ? (
-                      <a href={item.website} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-indigo-600 text-[11px] font-black flex items-center gap-2 uppercase hover:underline"> <Globe className="w-4 h-4" /> Visitar Web </a>
-                    ) : <span className="text-slate-300 text-[10px] font-black uppercase">Sin Sitio Web</span>}
-                    <a href={item.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="bg-slate-50 p-3 rounded-2xl text-slate-400 hover:text-indigo-600 transition-all hover:bg-indigo-50"> <ExternalLink className="w-5 h-5" /> </a>
+                      <a
+                        href={item.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-indigo-600 text-[11px] font-black flex items-center gap-2 uppercase hover:underline"
+                      >
+                        <Globe className="w-4 h-4" /> Visitar Web
+                      </a>
+                    ) : (
+                      <span className="text-slate-300 text-[10px] font-black uppercase">Sin Sitio Web</span>
+                    )}
+
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="bg-slate-50 p-3 rounded-2xl text-slate-400 hover:text-indigo-600 transition-all hover:bg-indigo-50"
+                    >
+                      <ExternalLink className="w-5 h-5" />
+                    </a>
                   </div>
                 </div>
               );
@@ -474,7 +717,7 @@ const Dashboard: React.FC = () => {
           </div>
 
           <div className="flex justify-center pt-12 pb-24">
-            <button 
+            <button
               onClick={() => handleScrape(undefined, lastQuery, true)}
               disabled={isScraping || results.length === 0}
               className="group flex flex-col items-center gap-4 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
@@ -484,7 +727,7 @@ const Dashboard: React.FC = () => {
               </div>
               <div className="text-center">
                 <p className="font-black text-slate-800 uppercase tracking-tighter">Extraer más leads frescos</p>
-                <p className="text-[10px] font-bold text-slate-400 italic">Siguiente página de Google Maps (20+ resultados)</p>
+                <p className="text-[10px] font-bold text-slate-400 italic">Siguiente página de Google Maps</p>
               </div>
             </button>
           </div>
