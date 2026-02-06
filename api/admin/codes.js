@@ -1,5 +1,5 @@
-const crypto = require("crypto");
-const { kv } = require("@vercel/kv");
+import crypto from "crypto";
+import { kv } from "@vercel/kv";
 
 function json(res, status, data) {
   res.status(status).setHeader("Content-Type", "application/json");
