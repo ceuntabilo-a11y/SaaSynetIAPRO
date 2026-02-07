@@ -24,14 +24,16 @@ async function readBody(req) {
   });
 }
 
-// Normaliza: quita espacios/guiones raros, deja solo A-Z0-9, y lo pone en mayúsculas.
-// Ej: "SN-2MM6-B9MG" => "SN2MM6B9MG"
 function normalizeCode(input) {
   return String(input || "")
     .trim()
     .toUpperCase()
-    .replace(/[^\p{L}\p{N}]/gu, "") // quita guiones, espacios, símbolos (soporta unicode)
-    .replace(/[^A-Z0-9]/g, ""); // por seguridad, deja solo A-Z0-9
+    .replace(/[^\p{L}\p{N}]/gu, "")
+    .replace(/[^A-Z0-9]/g, "");
+}
+
+function normalizeUsername(input) {
+  return String(input || "").trim().toLowerCase();
 }
 
 function clamp(n, min, max) {
@@ -56,7 +58,6 @@ export default async function handler(req, res) {
     const rawCode = code.trim();
     const normCode = normalizeCode(code);
 
-    // Compatibilidad: primero busca por normalizado, si no existe prueba el raw.
     let rec = await kv.get(`code:${normCode}`);
     if (!rec) rec = await kv.get(`code:${rawCode}`);
 
@@ -64,13 +65,15 @@ export default async function handler(req, res) {
       return json(res, 401, { error: "Invalid code" });
     }
 
-    if (rec.username !== username) {
+    const uIn = normalizeUsername(username);
+    const uRec = normalizeUsername(rec.usernameNormalized || rec.username);
+
+    if (uRec !== uIn) {
       return json(res, 401, { error: "Username/code mismatch" });
     }
 
     const now = Date.now();
     if (rec.expiresAt && now > rec.expiresAt) {
-      // borra ambos formatos por si acaso
       await kv.del(`code:${normCode}`);
       await kv.del(`code:${rawCode}`);
       return json(res, 401, { error: "Code expired" });
@@ -83,7 +86,7 @@ export default async function handler(req, res) {
     const ttlSeconds = clamp(remainingSec, 60, 30 * 24 * 60 * 60);
 
     const session = {
-      username,
+      username: uIn,
       createdAt: now,
       expiresAt: now + ttlSeconds * 1000,
     };

@@ -1,5 +1,4 @@
 import { kv } from "@vercel/kv";
-import crypto from "crypto";
 
 function json(res, status, data) {
   res.status(status).setHeader("Content-Type", "application/json");
@@ -45,7 +44,6 @@ async function requireAdmin(req, res) {
   return session;
 }
 
-// Igual que en verify
 function normalizeCode(input) {
   return String(input || "")
     .trim()
@@ -54,10 +52,14 @@ function normalizeCode(input) {
     .replace(/[^A-Z0-9]/g, "");
 }
 
-// Genera algo como SN-2MM6-B9MG (visual)
+function normalizeUsername(input) {
+  return String(input || "").trim().toLowerCase();
+}
+
 function generatePrettyCode() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sin 0,1,O,I
-  const part = (len) => Array.from({ length: len }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const part = (len) =>
+    Array.from({ length: len }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
   return `SN-${part(4)}-${part(4)}`;
 }
 
@@ -89,15 +91,15 @@ export default async function handler(req, res) {
     const norm = normalizeCode(pretty);
 
     const rec = {
-      code: pretty,       // lo que ves en pantalla
-      codeKey: norm,      // lo que se usa para buscar
-      username,
+      code: pretty,
+      codeKey: norm,
+      username: username.trim(),                // para mostrar
+      usernameNormalized: normalizeUsername(username), // para validar
       createdAt: now,
       expiresAt,
       durationDays: d,
     };
 
-    // Guarda por normalizado
     await kv.set(`code:${norm}`, rec, { ex: d * 24 * 60 * 60 });
 
     return json(res, 200, { ok: true, record: rec });
