@@ -7,7 +7,6 @@ function json(res, status, data) {
 }
 
 async function readBody(req) {
-  // Vercel / Node a veces ya trae el body parseado
   if (req.body && typeof req.body === "object") return req.body;
 
   return await new Promise((resolve, reject) => {
@@ -25,6 +24,15 @@ async function readBody(req) {
   });
 }
 
+// Normaliza: quita espacios/guiones raros, deja solo A-Z0-9, y lo pone en mayúsculas.
+// Ej: "SN-2MM6-B9MG" => "SN2MM6B9MG"
+function normalizeCode(input) {
+  return String(input || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^\p{L}\p{N}]/gu, "") // quita guiones, espacios, símbolos (soporta unicode)
+    .replace(/[^A-Z0-9]/g, ""); // por seguridad, deja solo A-Z0-9
+}
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
@@ -45,7 +53,13 @@ export default async function handler(req, res) {
       return json(res, 400, { error: "code is required" });
     }
 
-    const rec = await kv.get(`code:${code}`);
+    const rawCode = code.trim();
+    const normCode = normalizeCode(code);
+
+    // Compatibilidad: primero busca por normalizado, si no existe prueba el raw.
+    let rec = await kv.get(`code:${normCode}`);
+    if (!rec) rec = await kv.get(`code:${rawCode}`);
+
     if (!rec) {
       return json(res, 401, { error: "Invalid code" });
     }
@@ -56,7 +70,9 @@ export default async function handler(req, res) {
 
     const now = Date.now();
     if (rec.expiresAt && now > rec.expiresAt) {
-      await kv.del(`code:${code}`);
+      // borra ambos formatos por si acaso
+      await kv.del(`code:${normCode}`);
+      await kv.del(`code:${rawCode}`);
       return json(res, 401, { error: "Code expired" });
     }
 
@@ -82,6 +98,4 @@ export default async function handler(req, res) {
   } catch (err) {
     return json(res, 500, { error: "Server error", details: String(err?.message || err) });
   }
-  }
-
-
+}

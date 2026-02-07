@@ -1,5 +1,5 @@
-import crypto from "crypto";
 import { kv } from "@vercel/kv";
+import crypto from "crypto";
 
 function json(res, status, data) {
   res.status(status).setHeader("Content-Type", "application/json");
@@ -7,7 +7,6 @@ function json(res, status, data) {
 }
 
 async function readBody(req) {
-  // Vercel / Node a veces ya trae el body parseado
   if (req.body && typeof req.body === "object") return req.body;
 
   return await new Promise((resolve, reject) => {
@@ -24,7 +23,6 @@ async function readBody(req) {
     req.on("error", reject);
   });
 }
-
 
 function getBearerToken(req) {
   const h = req.headers["authorization"] || "";
@@ -47,77 +45,63 @@ async function requireAdmin(req, res) {
   return session;
 }
 
-function generate8DigitCode() {
-  const n = crypto.randomInt(0, 100000000);
-  return String(n).padStart(8, "0");
+// Igual que en verify
+function normalizeCode(input) {
+  return String(input || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^\p{L}\p{N}]/gu, "")
+    .replace(/[^A-Z0-9]/g, "");
 }
 
-function durationDaysToSeconds(days) {
-  return days * 24 * 60 * 60;
+// Genera algo como SN-2MM6-B9MG (visual)
+function generatePrettyCode() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sin 0,1,O,I
+  const part = (len) => Array.from({ length: len }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+  return `SN-${part(4)}-${part(4)}`;
 }
 
 export default async function handler(req, res) {
   try {
+    if (req.method !== "POST") {
+      return json(res, 405, { error: "Method not allowed" });
+    }
+
     const admin = await requireAdmin(req, res);
     if (!admin) return;
 
-    if (req.method === "POST") {
-      const { username, durationDays } = await readBody(req);
+    const body = await readBody(req);
+    const { username, durationDays } = body;
 
-      const days = Number(durationDays);
-      if (!username || typeof username !== "string") {
-        return json(res, 400, { error: "username is required" });
-      }
-      if (![1, 7, 30].includes(days)) {
-        return json(res, 400, { error: "durationDays must be 1, 7, or 30" });
-      }
-
-      let code = generate8DigitCode();
-      for (let i = 0; i < 5; i++) {
-        const exists = await kv.get(`code:${code}`);
-        if (!exists) break;
-        code = generate8DigitCode();
-      }
-
-      const ttlSeconds = durationDaysToSeconds(days);
-      const now = Date.now();
-      const expiresAt = now + ttlSeconds * 1000;
-
-      const record = {
-        code,
-        username,
-        createdAt: now,
-        expiresAt,
-        durationDays: days,
-      };
-
-      await kv.set(`code:${code}`, record, { ex: ttlSeconds });
-
-      return json(res, 200, { ok: true, record });
+    if (!username || typeof username !== "string") {
+      return json(res, 400, { error: "username is required" });
     }
 
-    if (req.method === "GET") {
-      const items = [];
-      for await (const key of kv.scanIterator({ match: "code:*", count: 200 })) {
-        const rec = await kv.get(key);
-        if (rec) items.push(rec);
-      }
-
-      items.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-      return json(res, 200, { ok: true, items });
+    const d = Number(durationDays);
+    if (![1, 7, 30].includes(d)) {
+      return json(res, 400, { error: "durationDays must be 1, 7, or 30" });
     }
 
-    if (req.method === "DELETE") {
-      const { code } = await readBody(req);
-      if (!code || typeof code !== "string") {
-        return json(res, 400, { error: "code is required" });
-      }
-      await kv.del(`code:${code}`);
-      return json(res, 200, { ok: true });
-    }
+    const now = Date.now();
+    const expiresAt = now + d * 24 * 60 * 60 * 1000;
 
-    return json(res, 405, { error: "Method not allowed" });
+    const pretty = generatePrettyCode();
+    const norm = normalizeCode(pretty);
+
+    const rec = {
+      code: pretty,       // lo que ves en pantalla
+      codeKey: norm,      // lo que se usa para buscar
+      username,
+      createdAt: now,
+      expiresAt,
+      durationDays: d,
+    };
+
+    // Guarda por normalizado
+    await kv.set(`code:${norm}`, rec, { ex: d * 24 * 60 * 60 });
+
+    return json(res, 200, { ok: true, record: rec });
   } catch (err) {
     return json(res, 500, { error: "Server error", details: String(err?.message || err) });
   }
-  }
+}
