@@ -114,4 +114,5 @@ export default async function handler(req, res) {
   } catch (err) {
     return json(res, 500, { error: "Server error", details: String(err?.message || err) });
   }
+}
 
