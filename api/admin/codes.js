@@ -6,19 +6,25 @@ function json(res, status, data) {
   res.end(JSON.stringify(data));
 }
 
-function readBody(req) {
-  return new Promise((resolve, reject) => {
+async function readBody(req) {
+  // Vercel / Node a veces ya trae el body parseado
+  if (req.body && typeof req.body === "object") return req.body;
+
+  return await new Promise((resolve, reject) => {
     let raw = "";
     req.on("data", (chunk) => (raw += chunk));
     req.on("end", () => {
+      if (!raw) return resolve({});
       try {
-        resolve(raw ? JSON.parse(raw) : {});
+        resolve(JSON.parse(raw));
       } catch (e) {
         reject(e);
       }
     });
+    req.on("error", reject);
   });
 }
+
 
 function getBearerToken(req) {
   const h = req.headers["authorization"] || "";
@@ -114,5 +120,4 @@ export default async function handler(req, res) {
   } catch (err) {
     return json(res, 500, { error: "Server error", details: String(err?.message || err) });
   }
-}
-
+  }
