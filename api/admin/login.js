@@ -20,7 +20,7 @@ function readBody(req) {
   });
 }
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   try {
     if (req.method !== "POST") {
       return json(res, 405, { error: "Method not allowed" });
@@ -52,4 +52,4 @@ module.exports = async (req, res) => {
   } catch (err) {
     return json(res, 500, { error: "Server error", details: String(err?.message || err) });
   }
-};
+

@@ -50,7 +50,7 @@ function durationDaysToSeconds(days) {
   return days * 24 * 60 * 60;
 }
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   try {
     const admin = await requireAdmin(req, res);
     if (!admin) return;
@@ -114,4 +114,4 @@ module.exports = async (req, res) => {
   } catch (err) {
     return json(res, 500, { error: "Server error", details: String(err?.message || err) });
   }
-};
+
