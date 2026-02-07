@@ -58,24 +58,17 @@ export default async function handler(req, res) {
     const rawCode = code.trim();
     const normCode = normalizeCode(code);
 
-    let rec = await kv.get(`code:${normCode}`);
-    if (!rec) rec = await kv.get(`code:${rawCode}`);
+    let rec = await kv.get(code:${normCode});
+    if (!rec) rec = await kv.get(code:${rawCode});
 
     if (!rec) {
       return json(res, 401, { error: "Invalid code" });
     }
 
-    const uIn = normalizeUsername(username);
-    const uRec = normalizeUsername(rec.usernameNormalized || rec.username);
-
-    if (uRec !== uIn) {
-      return json(res, 401, { error: "Username/code mismatch" });
-    }
-
     const now = Date.now();
     if (rec.expiresAt && now > rec.expiresAt) {
-      await kv.del(`code:${normCode}`);
-      await kv.del(`code:${rawCode}`);
+      await kv.del(code:${normCode});
+      await kv.del(code:${rawCode});
       return json(res, 401, { error: "Code expired" });
     }
 
@@ -86,12 +79,14 @@ export default async function handler(req, res) {
     const ttlSeconds = clamp(remainingSec, 60, 30 * 24 * 60 * 60);
 
     const session = {
-      username: uIn,
+      username: normalizeUsername(username),
       createdAt: now,
       expiresAt: now + ttlSeconds * 1000,
+      // opcional: guardamos el código usado
+      code: rec.code || rawCode,
     };
 
-    await kv.set(`session:${sessionToken}`, session, { ex: ttlSeconds });
+    await kv.set(session:${sessionToken}, session, { ex: ttlSeconds });
 
     return json(res, 200, {
       ok: true,
