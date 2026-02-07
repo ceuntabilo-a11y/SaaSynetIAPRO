@@ -1,30 +1,21 @@
-
 import React, { useState, useEffect } from 'react';
 import Login from './components/Login';
 import AdminPanel from './components/AdminPanel';
 import Dashboard from './components/Dashboard';
 import { AppView, UserSession } from './types';
-import { LayoutDashboard, ShieldCheck, LogOut, Sparkles } from 'lucide-react';
-
+import { ShieldCheck, LogOut, Sparkles } from 'lucide-react';
 
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>('login');
   const [session, setSession] = useState<UserSession | null>(null);
 
-  // Efecto para verificar sesión persistente (Simulado)
-  useEffect(() => {
-    const savedSession = localStorage.getItem('scraper_session');
-    if (savedSession) {
-      const parsed = JSON.parse(savedSession);
-      // Verificar si ha expirado
-      if (parsed.expiryDate && Date.now() > parsed.expiryDate && !parsed.isAdmin) {
-        handleLogout();
-      } else {
-        setSession(parsed);
-        setView(parsed.isAdmin ? 'admin' : 'dashboard');
-      }
-    }
-  }, []);
+  const handleLogout = () => {
+    setSession(null);
+    localStorage.removeItem('scraper_session');
+    localStorage.removeItem('user_session');
+    localStorage.removeItem('user_sessionToken');
+    setView('login');
+  };
 
   const handleLogin = (userSession: UserSession) => {
     setSession(userSession);
@@ -32,38 +23,68 @@ const App: React.FC = () => {
     setView(userSession.isAdmin ? 'admin' : 'dashboard');
   };
 
-  const handleLogout = () => {
-    setSession(null);
-    localStorage.removeItem('scraper_session');
-    setView('login');
-  };
+  useEffect(() => {
+    const savedSession = localStorage.getItem('scraper_session');
+
+    if (savedSession) {
+      try {
+        const parsed: UserSession = JSON.parse(savedSession);
+
+        // Si no es admin y tiene expiración, validar
+        if (
+          parsed.expiryDate &&
+          !parsed.isAdmin &&
+          Date.now() > parsed.expiryDate
+        ) {
+          handleLogout();
+        } else {
+          setSession(parsed);
+          setView(parsed.isAdmin ? 'admin' : 'dashboard');
+        }
+      } catch {
+        handleLogout();
+      }
+    }
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50/50">
-      {/* Navegación para usuarios autenticados */}
       {session && (
         <nav className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-8 py-4 flex justify-between items-center sticky top-0 z-50">
           <div className="flex items-center gap-3 font-black text-2xl tracking-tighter">
             <div className="bg-indigo-600 p-1.5 rounded-xl shadow-lg shadow-indigo-100">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <span className="text-slate-900">SaaSynetIA <span className="text-indigo-600">Scraper</span></span>
+            <span className="text-slate-900">
+              SaaSynetIA <span className="text-indigo-600">Scraper</span>
+            </span>
           </div>
+
           <div className="flex items-center gap-6 text-sm">
             <div className="hidden md:flex flex-col items-end leading-none">
-              <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Usuario Activo</span>
-              <span className="text-slate-800 font-bold">{session.email}</span>
+              <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">
+                Usuario Activo
+              </span>
+              <span className="text-slate-800 font-bold">
+                {session.email}
+              </span>
             </div>
+
             {session.isAdmin && (
-              <button 
-                onClick={() => setView(view === 'admin' ? 'dashboard' : 'admin')}
+              <button
+                onClick={() =>
+                  setView(view === 'admin' ? 'dashboard' : 'admin')
+                }
                 className="flex items-center gap-2 px-5 py-2.5 bg-indigo-50 text-indigo-700 rounded-2xl font-black text-xs hover:bg-indigo-100 transition-all active:scale-95"
               >
                 <ShieldCheck className="w-4 h-4" />
-                {view === 'admin' ? 'VOLVER AL SCRAPER' : 'PANEL CONTROL'}
+                {view === 'admin'
+                  ? 'VOLVER AL SCRAPER'
+                  : 'PANEL CONTROL'}
               </button>
             )}
-            <button 
+
+            <button
               onClick={handleLogout}
               className="flex items-center gap-2 px-4 py-2 text-slate-400 hover:text-rose-500 font-black text-xs transition-colors group"
             >
@@ -88,7 +109,8 @@ const App: React.FC = () => {
             <div className="h-[1px] w-12 bg-slate-100"></div>
           </div>
           <p className="text-slate-400 text-xs font-medium tracking-widest uppercase">
-            Desarrollado por <span className="text-indigo-600 font-black">SynetIA</span>
+            Desarrollado por{' '}
+            <span className="text-indigo-600 font-black">SynetIA</span>
           </p>
           <p className="text-[10px] text-slate-300 font-bold">
             &copy; {new Date().getFullYear()} &bull; Inteligencia en Extracción de Datos
