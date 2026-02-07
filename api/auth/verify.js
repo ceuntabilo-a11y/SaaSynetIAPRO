@@ -1,4 +1,4 @@
-import { randomBytes } from "crypto";
+import crypto from "crypto";
 import { kv } from "@vercel/kv";
 
 function json(res, status, data) {
@@ -24,8 +24,6 @@ async function readBody(req) {
   });
 }
 
-// Convierte "SN-GGH2-83TY" -> "SNGGH283TY"
-// Convierte "  sn-ggh2-83ty " -> "SNGGH283TY"
 function normalizeCode(input) {
   return String(input || "")
     .trim()
@@ -52,16 +50,19 @@ export default async function handler(req, res) {
     if (!username || typeof username !== "string") {
       return json(res, 400, { error: "username is required" });
     }
+
     if (!code || typeof code !== "string") {
       return json(res, 400, { error: "code is required" });
     }
 
-    const rawCode = code.trim(); // "SN-GGH2-83TY"
-    const normCode = normalizeCode(code); // "SNGGH283TY"
+    const rawCode = code.trim();
+    const normCode = normalizeCode(code);
 
-    // Intentamos ambas llaves por si el admin lo guardó con o sin guiones
+    // 🔹 BUSCAMOS EL CÓDIGO EN KV (con y sin guiones)
     let rec = await kv.get(`code:${normCode}`);
-    if (!rec) rec = await kv.get(`code:${rawCode}`);
+    if (!rec) {
+      rec = await kv.get(`code:${rawCode}`);
+    }
 
     if (!rec) {
       return json(res, 401, { error: "Invalid code" });
@@ -70,13 +71,12 @@ export default async function handler(req, res) {
     const now = Date.now();
 
     if (rec.expiresAt && now > rec.expiresAt) {
-      // borramos ambas por si acaso
       await kv.del(`code:${normCode}`);
       await kv.del(`code:${rawCode}`);
       return json(res, 401, { error: "Code expired" });
     }
 
-    const sessionToken = randomBytes(32).toString("hex");
+    const sessionToken = crypto.randomBytes(32).toString("hex");
 
     const remainingMs = (rec.expiresAt || now) - now;
     const remainingSec = Math.floor(remainingMs / 1000);
@@ -96,6 +96,7 @@ export default async function handler(req, res) {
       sessionToken,
       session,
     });
+
   } catch (err) {
     return json(res, 500, {
       error: "Server error",
