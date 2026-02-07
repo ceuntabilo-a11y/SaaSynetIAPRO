@@ -2,13 +2,16 @@ import crypto from "crypto";
 import { kv } from "@vercel/kv";
 
 function json(res, status, data) {
-  res.status(status).setHeader("Content-Type", "application/json");
+  res.statusCode = status;
+  res.setHeader("Content-Type", "application/json");
   res.end(JSON.stringify(data));
 }
 
 async function readBody(req) {
+  // Si Vercel ya parseó JSON:
   if (req.body && typeof req.body === "object") return req.body;
 
+  // Si llega como stream:
   return await new Promise((resolve, reject) => {
     let raw = "";
     req.on("data", (chunk) => (raw += chunk));
@@ -25,6 +28,7 @@ async function readBody(req) {
 }
 
 // "SN-GGH2-83TY" -> "SNGGH283TY"
+// "  sn-ggh2-83ty " -> "SNGGH283TY"
 function normalizeCode(input) {
   return String(input || "")
     .trim()
@@ -55,15 +59,12 @@ export default async function handler(req, res) {
       return json(res, 400, { error: "code is required" });
     }
 
-    const rawCode = code.trim();          // "SN-GGH2-83TY"
-    const normCode = normalizeCode(code); // "SNGGH283TY"
+    const rawCode = code.trim();           // "SN-GGH2-83TY"
+    const normCode = normalizeCode(code);  // "SNGGH283TY"
 
-    // 👇 AQUÍ estaba el error: faltaban backticks
-    const keyNorm = `code:${normCode}`;
-    const keyRaw = `code:${rawCode}`;
-
-    let rec = await kv.get(keyNorm);
-    if (!rec) rec = await kv.get(keyRaw);
+    // Probamos con y sin guiones (por si el admin guardó distinto)
+    let rec = await kv.get(`code:${normCode}`);
+    if (!rec) rec = await kv.get(`code:${rawCode}`);
 
     if (!rec) {
       return json(res, 401, { error: "Invalid code" });
@@ -72,8 +73,8 @@ export default async function handler(req, res) {
     const now = Date.now();
 
     if (rec.expiresAt && now > rec.expiresAt) {
-      await kv.del(keyNorm);
-      await kv.del(keyRaw);
+      await kv.del(`code:${normCode}`);
+      await kv.del(`code:${rawCode}`);
       return json(res, 401, { error: "Code expired" });
     }
 
@@ -90,7 +91,6 @@ export default async function handler(req, res) {
       code: rec.code || rawCode,
     };
 
-    // 👇 AQUÍ también: backticks correctos
     await kv.set(`session:${sessionToken}`, session, { ex: ttlSeconds });
 
     return json(res, 200, {
