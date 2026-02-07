@@ -1,4 +1,4 @@
-import crypto from "crypto";
+import { randomBytes } from "crypto";
 import { kv } from "@vercel/kv";
 
 function json(res, status, data) {
@@ -56,12 +56,12 @@ export default async function handler(req, res) {
       return json(res, 400, { error: "code is required" });
     }
 
-    const rawCode = code.trim();        // "SN-GGH2-83TY"
+    const rawCode = code.trim(); // "SN-GGH2-83TY"
     const normCode = normalizeCode(code); // "SNGGH283TY"
 
     // Intentamos ambas llaves por si el admin lo guardó con o sin guiones
-    let rec = await kv.get(code:${normCode});
-    if (!rec) rec = await kv.get(code:${rawCode});
+    let rec = await kv.get(`code:${normCode}`);
+    if (!rec) rec = await kv.get(`code:${rawCode}`);
 
     if (!rec) {
       return json(res, 401, { error: "Invalid code" });
@@ -71,12 +71,12 @@ export default async function handler(req, res) {
 
     if (rec.expiresAt && now > rec.expiresAt) {
       // borramos ambas por si acaso
-      await kv.del(code:${normCode});
-      await kv.del(code:${rawCode});
+      await kv.del(`code:${normCode}`);
+      await kv.del(`code:${rawCode}`);
       return json(res, 401, { error: "Code expired" });
     }
 
-    const sessionToken = crypto.randomBytes(32).toString("hex");
+    const sessionToken = randomBytes(32).toString("hex");
 
     const remainingMs = (rec.expiresAt || now) - now;
     const remainingSec = Math.floor(remainingMs / 1000);
@@ -89,7 +89,7 @@ export default async function handler(req, res) {
       code: rec.code || rawCode,
     };
 
-    await kv.set(session:${sessionToken}, session, { ex: ttlSeconds });
+    await kv.set(`session:${sessionToken}`, session, { ex: ttlSeconds });
 
     return json(res, 200, {
       ok: true,
@@ -97,7 +97,6 @@ export default async function handler(req, res) {
       session,
     });
   } catch (err) {
-    // IMPORTANTE: devolvemos stack para que veas el error exacto si vuelve a 500
     return json(res, 500, {
       error: "Server error",
       details: String(err?.message || err),
