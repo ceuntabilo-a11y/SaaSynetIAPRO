@@ -16,42 +16,61 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError("");
 
     try {
-      const res = await fetch("/api/auth/verify", {
+      // 🔹 Intentar login ADMIN primero
+      const adminRes = await fetch("/api/admin/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          username: username.trim(),
-          code: code.trim(),
+          user: username,
+          pass: code,
         }),
       });
 
-      // Intentamos leer JSON (aunque venga error)
-      let data: any = null;
-      try {
-        data = await res.json();
-      } catch {
-        data = null;
+      const adminData = await adminRes.json();
+
+      if (adminRes.ok && adminData?.ok) {
+        localStorage.setItem("admin_token", adminData.token);
+
+        onLogin({
+          email: username,
+          isAdmin: true,
+        } as any);
+
+        return;
       }
 
-      if (!res.ok || !data?.ok) {
+      // 🔹 Si no es admin, intentar como usuario normal
+      const userRes = await fetch("/api/auth/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: username,
+          code: code,
+        }),
+      });
+
+      const userData = await userRes.json();
+
+      if (!userRes.ok || !userData?.ok) {
         setError(
-          data?.error ||
-            `Error (${res.status}). Revisa usuario/código e intenta de nuevo.`
+          userData?.error ||
+            "Credenciales inválidas. Contacta al administrador."
         );
         return;
       }
 
-      // Guarda sesión en el navegador
-      localStorage.setItem("user_sessionToken", data.sessionToken);
-      localStorage.setItem("user_session", JSON.stringify(data.session));
+      localStorage.setItem("user_sessionToken", userData.sessionToken);
+      localStorage.setItem("user_session", JSON.stringify(userData.session));
 
-      // En tu app, UserSession usa "email" como identificador.
-      // Aquí guardamos el username ahí para no romper nada.
       onLogin({
-        email: username.trim(),
+        email: username,
         isAdmin: false,
-        expiryDate: data.session?.expiresAt,
-      });
+        expiryDate: userData.session?.expiresAt,
+      } as any);
     } catch (err) {
       setError("Error de conexión. Intenta nuevamente.");
     }
@@ -68,7 +87,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             Acceso al Software
           </h1>
           <p className="text-slate-500 mt-2">
-            Ingresa tus credenciales para comenzar el scraping.
+            Ingresa tus credenciales
           </p>
         </div>
 
@@ -89,7 +108,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <input
                 type="text"
                 required
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl"
                 placeholder="Ingresa tu usuario"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -99,15 +118,15 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">
-              Código de Acceso
+              Código o Clave
             </label>
             <div className="relative">
               <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
-                type="text"
+                type="password"
                 required
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
-                placeholder="Ingresa tu código único"
+                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl"
+                placeholder="Código usuario o clave admin"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
               />
@@ -116,9 +135,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
           <button
             type="submit"
-            className="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-bold text-lg hover:bg-indigo-700 shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+            className="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-bold text-lg hover:bg-indigo-700 shadow-lg shadow-indigo-200 flex items-center justify-center gap-2"
           >
-            Entrar al Panel
+            Entrar
             <ArrowRight className="w-5 h-5" />
           </button>
         </form>
@@ -128,4 +147,3 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 };
 
 export default Login;
-
