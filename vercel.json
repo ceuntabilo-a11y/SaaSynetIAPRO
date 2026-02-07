@@ -3,13 +3,11 @@
   "outputDirectory": "dist",
   "functions": {
     "api/**/*.js": {
-      "runtime": "nodejs20.x"
+      "runtime": "nodejs20"
     }
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/assets/(.*)", "destination": "/assets/$1" },
-    { "source": "/favicon.ico", "destination": "/favicon.ico" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
