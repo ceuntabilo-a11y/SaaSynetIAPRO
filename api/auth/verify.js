@@ -1,14 +1,13 @@
-import crypto from "crypto";
-import { kv } from "@vercel/kv";
+const crypto = require("crypto");
+const { kv } = require("@vercel/kv");
 
 function json(res, status, data) {
-  res.status(status).setHeader("Content-Type", "application/json");
+  res.statusCode = status;
+  res.setHeader("Content-Type", "application/json");
   res.end(JSON.stringify(data));
 }
 
 async function readBody(req) {
-  if (req.body && typeof req.body === "object") return req.body;
-
   return await new Promise((resolve, reject) => {
     let raw = "";
     req.on("data", (chunk) => (raw += chunk));
@@ -39,7 +38,7 @@ function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   try {
     if (req.method !== "POST") {
       return json(res, 405, { error: "Method not allowed" });
@@ -50,19 +49,16 @@ export default async function handler(req, res) {
     if (!username || typeof username !== "string") {
       return json(res, 400, { error: "username is required" });
     }
-
     if (!code || typeof code !== "string") {
       return json(res, 400, { error: "code is required" });
     }
 
-    const rawCode = code.trim();
-    const normCode = normalizeCode(code);
+    const rawCode = code.trim();               // "SN-GGH2-83TY"
+    const normCode = normalizeCode(rawCode);   // "SNGGH283TY"
 
-    // 🔹 BUSCAMOS EL CÓDIGO EN KV (con y sin guiones)
+    // buscar licencia (por si fue guardada con o sin guiones)
     let rec = await kv.get(`code:${normCode}`);
-    if (!rec) {
-      rec = await kv.get(`code:${rawCode}`);
-    }
+    if (!rec) rec = await kv.get(`code:${rawCode}`);
 
     if (!rec) {
       return json(res, 401, { error: "Invalid code" });
@@ -78,7 +74,7 @@ export default async function handler(req, res) {
 
     const sessionToken = crypto.randomBytes(32).toString("hex");
 
-    const remainingMs = (rec.expiresAt || now) - now;
+    const remainingMs = (rec.expiresAt || now + 60_000) - now;
     const remainingSec = Math.floor(remainingMs / 1000);
     const ttlSeconds = clamp(remainingSec, 60, 30 * 24 * 60 * 60);
 
@@ -96,12 +92,13 @@ export default async function handler(req, res) {
       sessionToken,
       session,
     });
-
   } catch (err) {
+    // Esto ya NO debería salir como FUNCTION_INVOCATION_FAILED,
+    // porque atrapamos el error y devolvemos JSON.
     return json(res, 500, {
       error: "Server error",
       details: String(err?.message || err),
       stack: String(err?.stack || ""),
     });
   }
-}
+};
