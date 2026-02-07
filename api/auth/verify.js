@@ -24,11 +24,12 @@ async function readBody(req) {
   });
 }
 
+// Convierte "SN-GGH2-83TY" -> "SNGGH283TY"
+// Convierte "  sn-ggh2-83ty " -> "SNGGH283TY"
 function normalizeCode(input) {
   return String(input || "")
     .trim()
     .toUpperCase()
-    .replace(/[^\p{L}\p{N}]/gu, "")
     .replace(/[^A-Z0-9]/g, "");
 }
 
@@ -55,9 +56,10 @@ export default async function handler(req, res) {
       return json(res, 400, { error: "code is required" });
     }
 
-    const rawCode = code.trim();
-    const normCode = normalizeCode(code);
+    const rawCode = code.trim();        // "SN-GGH2-83TY"
+    const normCode = normalizeCode(code); // "SNGGH283TY"
 
+    // Intentamos ambas llaves por si el admin lo guardó con o sin guiones
     let rec = await kv.get(code:${normCode});
     if (!rec) rec = await kv.get(code:${rawCode});
 
@@ -66,7 +68,9 @@ export default async function handler(req, res) {
     }
 
     const now = Date.now();
+
     if (rec.expiresAt && now > rec.expiresAt) {
+      // borramos ambas por si acaso
       await kv.del(code:${normCode});
       await kv.del(code:${rawCode});
       return json(res, 401, { error: "Code expired" });
@@ -82,7 +86,6 @@ export default async function handler(req, res) {
       username: normalizeUsername(username),
       createdAt: now,
       expiresAt: now + ttlSeconds * 1000,
-      // opcional: guardamos el código usado
       code: rec.code || rawCode,
     };
 
@@ -94,6 +97,11 @@ export default async function handler(req, res) {
       session,
     });
   } catch (err) {
-    return json(res, 500, { error: "Server error", details: String(err?.message || err) });
+    // IMPORTANTE: devolvemos stack para que veas el error exacto si vuelve a 500
+    return json(res, 500, {
+      error: "Server error",
+      details: String(err?.message || err),
+      stack: String(err?.stack || ""),
+    });
   }
 }
