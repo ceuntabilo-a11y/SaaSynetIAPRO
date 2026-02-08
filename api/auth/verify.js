@@ -1,4 +1,3 @@
-import crypto from "crypto";
 import { kv } from "@vercel/kv";
 
 function json(res, status, data) {
@@ -44,6 +43,13 @@ function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
 
+// ✅ Token compatible (sin Node crypto)
+function randomHex(bytes = 32) {
+  const arr = new Uint8Array(bytes);
+  globalThis.crypto.getRandomValues(arr);
+  return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 export default async function handler(req, res) {
   try {
     if (req.method !== "POST") {
@@ -59,8 +65,8 @@ export default async function handler(req, res) {
       return json(res, 400, { error: "code is required" });
     }
 
-    const rawCode = code.trim();           // "SN-GGH2-83TY"
-    const normCode = normalizeCode(code);  // "SNGGH283TY"
+    const rawCode = code.trim(); // "SN-GGH2-83TY"
+    const normCode = normalizeCode(code); // "SNGGH283TY"
 
     // Probamos con y sin guiones (por si el admin guardó distinto)
     let rec = await kv.get(`code:${normCode}`);
@@ -78,7 +84,7 @@ export default async function handler(req, res) {
       return json(res, 401, { error: "Code expired" });
     }
 
-    const sessionToken = crypto.randomBytes(32).toString("hex");
+    const sessionToken = randomHex(32);
 
     const remainingMs = (rec.expiresAt || now) - now;
     const remainingSec = Math.floor(remainingMs / 1000);
