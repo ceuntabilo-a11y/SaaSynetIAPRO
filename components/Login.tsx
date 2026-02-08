@@ -19,48 +19,55 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     const c = code.trim();
 
     try {
-      // ✅ 1) Intento Admin (usa /api/admin/login)
-      if (u === "dorian500" && c === "SynetIA./500") {
+      // 1) Intento ADMIN primero (SIN hardcodear credenciales)
+      {
         const res = await fetch("/api/admin/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ user: u, pass: c }),
         });
 
-        const data = await res.json();
+        // Si responde ok, entramos como admin
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.ok && data?.token) {
+            localStorage.setItem("admin_token", data.token);
+            localStorage.removeItem("user_sessionToken");
+            localStorage.removeItem("user_session");
 
-        if (!res.ok || !data?.ok || !data?.token) {
-          setError(data?.error || "Credenciales admin inválidas.");
-          return;
+            onLogin({
+              email: u,
+              isAdmin: true,
+              expiryDate: null as any,
+            } as any);
+            return;
+          }
         }
-
-        // Guardamos token admin para usarlo en /api/admin/codes
-        localStorage.setItem("admin_token", data.token);
-
-        onLogin({
-          email: u,
-          isAdmin: true,
-        } as any);
-
-        return;
       }
 
-      // ✅ 2) Usuario normal (usa /api/auth/verify)
+      // 2) Si no es admin, intentamos USUARIO normal (código de licencia)
       const res = await fetch("/api/auth/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: u, code: c }),
+        body: JSON.stringify({
+          username: u,
+          code: c,
+        }),
       });
 
       const data = await res.json();
 
       if (!res.ok || !data?.ok) {
-        setError(data?.error || "Usuario o código inválido. Contacta al administrador.");
+        setError(
+          data?.error ||
+            "Usuario o código inválido. Por favor contacta al administrador."
+        );
         return;
       }
 
       localStorage.setItem("user_sessionToken", data.sessionToken);
       localStorage.setItem("user_session", JSON.stringify(data.session));
+      localStorage.removeItem("admin_token");
 
       onLogin({
         email: u,
@@ -79,8 +86,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <div className="bg-indigo-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <KeyRound className="w-8 h-8 text-indigo-600" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-800">Acceso al Software</h1>
-          <p className="text-slate-500 mt-2">Ingresa tus credenciales para comenzar.</p>
+          <h1 className="text-2xl font-bold text-slate-800">
+            Acceso al Software
+          </h1>
+          <p className="text-slate-500 mt-2">
+            Ingresa tus credenciales para comenzar.
+          </p>
         </div>
 
         {error && (
@@ -92,7 +103,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Usuario</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
+              Usuario
+            </label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
@@ -102,21 +115,25 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 placeholder="Ingresa tu usuario"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Código de Acceso</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
+              Código / Clave
+            </label>
             <div className="relative">
               <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
                 type="text"
                 required
                 className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
-                placeholder="Ingresa tu código único"
+                placeholder="Ingresa tu código o clave"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
+                autoComplete="current-password"
               />
             </div>
           </div>
@@ -129,10 +146,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <ArrowRight className="w-5 h-5" />
           </button>
         </form>
-
-        <div className="mt-6 text-center text-xs text-slate-400">
-          Admin: usa <b>dorian500</b> / <b>SynetIA./500</b>
-        </div>
       </div>
     </div>
   );
