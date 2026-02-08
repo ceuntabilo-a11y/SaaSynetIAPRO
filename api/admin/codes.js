@@ -44,16 +44,11 @@ async function requireAdmin(req, res) {
   return session;
 }
 
-// ✅ Normalización simple y segura
 function normalizeCode(input) {
   return String(input || "")
     .trim()
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, "");
-}
-
-function normalizeUsername(input) {
-  return String(input || "").trim().toLowerCase();
 }
 
 function generatePrettyCode() {
@@ -73,11 +68,7 @@ export default async function handler(req, res) {
     if (!admin) return;
 
     const body = await readBody(req);
-    const { username, durationDays } = body;
-
-    if (!username || typeof username !== "string") {
-      return json(res, 400, { error: "username is required" });
-    }
+    const { durationDays } = body;
 
     const d = Number(durationDays);
     if (![1, 7, 30].includes(d)) {
@@ -93,8 +84,6 @@ export default async function handler(req, res) {
     const rec = {
       code: pretty,
       codeKey: norm,
-      username: username.trim(), // para mostrar
-      usernameNormalized: normalizeUsername(username), // para validar si tú quieres amarrarlo
       createdAt: now,
       expiresAt,
       durationDays: d,
