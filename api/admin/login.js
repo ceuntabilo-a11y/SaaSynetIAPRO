@@ -1,4 +1,3 @@
-import crypto from "crypto";
 import { kv } from "@vercel/kv";
 
 function json(res, status, data) {
@@ -7,7 +6,6 @@ function json(res, status, data) {
 }
 
 async function readBody(req) {
-  // Vercel / Node a veces ya trae el body parseado
   if (req.body && typeof req.body === "object") return req.body;
 
   return await new Promise((resolve, reject) => {
@@ -25,6 +23,12 @@ async function readBody(req) {
   });
 }
 
+// ✅ Función correcta para generar token compatible
+function randomHex(bytes = 32) {
+  const arr = new Uint8Array(bytes);
+  globalThis.crypto.getRandomValues(arr);
+  return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 export default async function handler(req, res) {
   try {
@@ -45,10 +49,16 @@ export default async function handler(req, res) {
       return json(res, 401, { error: "Invalid credentials" });
     }
 
-    const token = crypto.randomBytes(32).toString("hex");
+    // ✅ Ahora sí generamos el token correctamente
+    const token = randomHex(32);
+
     const ttlSeconds = 60 * 60 * 12; // 12 horas
 
-    await kv.set(`admin:session:${token}`, { user: ADMIN_USER, createdAt: Date.now() }, { ex: ttlSeconds });
+    await kv.set(
+      `admin:session:${token}`,
+      { user: ADMIN_USER, createdAt: Date.now() },
+      { ex: ttlSeconds }
+    );
 
     return json(res, 200, {
       ok: true,
@@ -56,7 +66,9 @@ export default async function handler(req, res) {
       expiresInSeconds: ttlSeconds,
     });
   } catch (err) {
-    return json(res, 500, { error: "Server error", details: String(err?.message || err) });
+    return json(res, 500, {
+      error: "Server error",
+      details: String(err?.message || err),
+    });
   }
 }
-
