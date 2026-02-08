@@ -44,11 +44,11 @@ async function requireAdmin(req, res) {
   return session;
 }
 
+// ✅ Normalización simple y segura
 function normalizeCode(input) {
   return String(input || "")
     .trim()
     .toUpperCase()
-    .replace(/[^\p{L}\p{N}]/gu, "")
     .replace(/[^A-Z0-9]/g, "");
 }
 
@@ -93,8 +93,8 @@ export default async function handler(req, res) {
     const rec = {
       code: pretty,
       codeKey: norm,
-      username: username.trim(),                // para mostrar
-      usernameNormalized: normalizeUsername(username), // para validar
+      username: username.trim(), // para mostrar
+      usernameNormalized: normalizeUsername(username), // para validar si tú quieres amarrarlo
       createdAt: now,
       expiresAt,
       durationDays: d,
