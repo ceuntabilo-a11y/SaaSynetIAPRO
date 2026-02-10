@@ -4,13 +4,10 @@ import {
   MapPin,
   Loader2,
   Download,
-  Table,
   Phone,
   Globe,
   ExternalLink,
   AlertTriangle,
-  Briefcase,
-  Map,
   CheckCircle2,
   Sparkles,
   BrainCircuit,
@@ -44,10 +41,10 @@ const NICHES_DATA: Record<string, string[]> = {
 const COUNTRIES_CITIES: Record<string, string[]> = {
   "España": ["Madrid", "Barcelona"],
   "Estados Unidos": ["Washington D.C.", "New York"],
-  "México": ["Ciudad de México", "Monterrey"],
+  "México": ["Ciudad de México", "Toluca","Monterrey"],
   "Argentina": ["Buenos Aires", "Córdoba"],
   "Colombia": ["Bogotá", "Medellín"],
-  "Chile": ["Santiago", "Concepción"],
+  "Chile": ["Santiago", "Rancagua","Machali","Concepción"],
   "Perú": ["Lima", "Arequipa"],
   "Reino Unido": ["Londres", "Manchester"],
   "Francia": ["París", "Lyon"],
@@ -107,6 +104,10 @@ const Dashboard: React.FC = () => {
   const [city, setCity] = useState<string>('');
   const [maxLeads, setMaxLeads] = useState<number>(20);
 
+  // Motor API (SerpApi Key) - ahora también para usuario
+  const [motorApiKey, setMotorApiKey] = useState<string>('');
+  const [motorSavedOk, setMotorSavedOk] = useState<boolean>(false);
+
   // Paginación y Memoria
   const [currentOffset, setCurrentOffset] = useState<number>(0);
   const [lastQuery, setLastQuery] = useState<string>('');
@@ -138,6 +139,16 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const savedHistory = localStorage.getItem('search_history');
     if (savedHistory) setSearchHistory(JSON.parse(savedHistory));
+
+    // ✅ Cargar API Key del usuario desde localStorage
+    const savedSettings = localStorage.getItem('scraper_settings');
+    if (savedSettings) {
+      try {
+        const parsed: ScraperSettings = JSON.parse(savedSettings);
+        if (parsed?.apiKey) setMotorApiKey(parsed.apiKey);
+      } catch { /* ignore */ }
+    }
+
     fetchBalance();
   }, []);
 
@@ -163,6 +174,24 @@ const Dashboard: React.FC = () => {
         setAccountBalance({ left: info.planSearchesLeft, total: info.searchesPerMonth });
       }
     }
+  };
+
+  const saveMotorApiKey = async () => {
+    setMotorSavedOk(false);
+    setError(null);
+
+    const key = (motorApiKey || '').trim();
+    if (!key) {
+      setError("Debes pegar tu SerpApi Key antes de guardar.");
+      return;
+    }
+
+    const settings: ScraperSettings = { apiKey: key };
+    localStorage.setItem('scraper_settings', JSON.stringify(settings));
+    setMotorSavedOk(true);
+
+    await fetchBalance();
+    setTimeout(() => setMotorSavedOk(false), 2000);
   };
 
   const saveToHistory = (query: string) => {
@@ -258,7 +287,7 @@ const Dashboard: React.FC = () => {
 
     try {
       const savedSettings = localStorage.getItem('scraper_settings');
-      if (!savedSettings) throw new Error("Configura la API Key en el Panel Admin.");
+      if (!savedSettings) throw new Error("Configura tu SerpApi Key en el panel 'Motor API' (arriba) y guarda.");
       const { apiKey }: ScraperSettings = JSON.parse(savedSettings);
 
       setScrapeStatus(isLoadMore ? "Cargando más resultados..." : "Consultando Google Maps...");
@@ -372,6 +401,53 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-8 animate-fadeIn">
+
+      {/* ✅ MOTOR API PARA USUARIO (SerpApi Key) */}
+      <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
+        <div className="p-10 space-y-6">
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-slate-800">Configuración del Motor</h2>
+            <p className="text-slate-500 font-medium">Estamos usando SerpApi por su velocidad y gratuidad.</p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">SerpApi Key</label>
+            <input
+              type="password"
+              className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-semibold text-slate-700 focus:border-indigo-200 focus:bg-white transition"
+              placeholder="Pega tu SerpApi Key aquí"
+              value={motorApiKey}
+              onChange={(e) => setMotorApiKey(e.target.value)}
+              autoComplete="off"
+            />
+            <a
+              href="https://serpapi.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-indigo-600 text-[11px] font-black hover:underline"
+            >
+              Obtén tu clave gratis aquí <ExternalLink className="w-4 h-4" />
+            </a>
+          </div>
+
+          <button
+            type="button"
+            onClick={saveMotorApiKey}
+            className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-sm transition-all hover:shadow-lg hover:bg-indigo-600 active:scale-[0.99] flex items-center justify-center gap-2"
+          >
+            {motorSavedOk ? (
+              <>
+                <CheckCircle2 className="w-5 h-5" /> Guardado
+              </>
+            ) : (
+              <>
+                Guardar Cambios
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
       <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
         <div className="text-center md:text-left space-y-2">
           <h1 className="text-4xl font-black text-slate-800 tracking-tight flex items-center justify-center md:justify-start gap-3">
