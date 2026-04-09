@@ -1,15 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { AccessCode, ScraperSettings } from "../types";
-import { Trash2, Settings, Key, ExternalLink } from "lucide-react";
+import { Trash2, Settings, Key, ExternalLink, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 
 const AdminPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"codes" | "settings">("codes");
   const [codes, setCodes] = useState<AccessCode[]>([]);
 
-  // UI actual usa horas (24 / 168 / 720)
   const [durationHours, setDurationHours] = useState(24);
 
-  // Configuración de Scraper (lo mantengo igual)
   const [apiKey, setApiKey] = useState("");
   const [maxResults, setMaxResults] = useState(20);
   const [isSaving, setIsSaving] = useState(false);
@@ -50,7 +48,7 @@ const AdminPanel: React.FC = () => {
   function hoursToDays(h: number): 1 | 7 | 30 {
     if (h === 24) return 1;
     if (h === 168) return 7;
-    return 30; // 720
+    return 30;
   }
 
   const generateCode = async () => {
@@ -69,10 +67,7 @@ const AdminPanel: React.FC = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${adminToken}`,
         },
-        body: JSON.stringify({
-          durationDays,
-          // No amarramos a username (tu caso: el usuario lo inventa)
-        }),
+        body: JSON.stringify({ durationDays }),
       });
 
       const data = await res.json();
@@ -82,11 +77,10 @@ const AdminPanel: React.FC = () => {
         return;
       }
 
-      // Convertimos el record del backend a tu tipo AccessCode (front)
       const rec = data.record;
 
       const newCode: AccessCode = {
-        id: rec.codeKey || rec.code, // algo único
+        id: rec.codeKey || rec.code,
         code: rec.code,
         durationHours: durationDays === 1 ? 24 : durationDays === 7 ? 168 : 720,
         createdAt: rec.createdAt,
@@ -104,6 +98,28 @@ const AdminPanel: React.FC = () => {
     if (window.confirm("¿Eliminar este acceso (solo de la lista local)?")) {
       saveCodes(codes.filter((c) => c.id !== id));
     }
+  };
+
+  const getCodeStatus = (code: AccessCode) => {
+    const now = Date.now();
+    if (!code.expiresAt) return "active";
+    if (now > code.expiresAt) return "expired";
+    const hoursLeft = (code.expiresAt - now) / (1000 * 60 * 60);
+    if (hoursLeft < 2) return "expiring";
+    return "active";
+  };
+
+  const formatTimeLeft = (expiresAt: number) => {
+    const now = Date.now();
+    const diff = expiresAt - now;
+    if (diff <= 0) return "Vencido";
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    if (hours > 24) {
+      const days = Math.floor(hours / 24);
+      return `${days}d ${hours % 24}h restantes`;
+    }
+    return `${hours}h ${minutes}m restantes`;
   };
 
   return (
@@ -168,32 +184,56 @@ const AdminPanel: React.FC = () => {
               <thead className="bg-slate-50 text-[10px] font-black uppercase text-slate-400 tracking-widest">
                 <tr>
                   <th className="px-8 py-4">Código</th>
+                  <th className="px-8 py-4">Estado</th>
                   <th className="px-8 py-4">Expiración</th>
                   <th className="px-8 py-4 text-right">Acción</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {codes.map((c) => (
-                  <tr key={c.id} className="text-sm font-medium text-slate-600">
-                    <td className="px-8 py-4 font-mono font-bold text-indigo-600">
-                      {c.code}
-                    </td>
-                    <td className="px-8 py-4 text-xs">
-                      {new Date(c.expiresAt).toLocaleString()}
-                    </td>
-                    <td className="px-8 py-4 text-right">
-                      <button
-                        onClick={() => deleteCode(c.id)}
-                        className="text-slate-300 hover:text-red-500 p-2"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {codes.map((c) => {
+                  const status = getCodeStatus(c);
+                  return (
+                    <tr key={c.id} className="text-sm font-medium text-slate-600">
+                      <td className="px-8 py-4 font-mono font-bold text-indigo-600">
+                        {c.code}
+                      </td>
+                      <td className="px-8 py-4">
+                        {status === "active" && (
+                          <span className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full text-[11px] font-black w-fit">
+                            <CheckCircle2 className="w-3 h-3" /> Activo
+                          </span>
+                        )}
+                        {status === "expiring" && (
+                          <span className="flex items-center gap-1.5 text-amber-600 bg-amber-50 px-3 py-1 rounded-full text-[11px] font-black w-fit">
+                            <Clock className="w-3 h-3" /> Por vencer
+                          </span>
+                        )}
+                        {status === "expired" && (
+                          <span className="flex items-center gap-1.5 text-rose-600 bg-rose-50 px-3 py-1 rounded-full text-[11px] font-black w-fit">
+                            <AlertCircle className="w-3 h-3" /> Vencido
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-8 py-4 text-xs">
+                        <div>{new Date(c.expiresAt).toLocaleString()}</div>
+                        <div className={`text-[11px] font-bold mt-0.5 ${status === "expired" ? "text-rose-400" : status === "expiring" ? "text-amber-400" : "text-slate-400"}`}>
+                          {formatTimeLeft(c.expiresAt)}
+                        </div>
+                      </td>
+                      <td className="px-8 py-4 text-right">
+                        <button
+                          onClick={() => deleteCode(c.id)}
+                          className="text-slate-300 hover:text-red-500 p-2"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
                 {codes.length === 0 && (
                   <tr>
-                    <td className="px-8 py-6 text-sm text-slate-400" colSpan={3}>
+                    <td className="px-8 py-6 text-sm text-slate-400" colSpan={4}>
                       Aún no hay códigos en la lista local. Crea uno.
                     </td>
                   </tr>

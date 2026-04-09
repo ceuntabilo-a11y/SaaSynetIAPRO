@@ -21,7 +21,9 @@ import {
   Database,
   FilterX,
   PlusCircle,
-  Trash2
+  Trash2,
+  Settings,
+  Zap,
 } from 'lucide-react';
 import { BusinessData, ScraperSettings } from '../types';
 import { getSerpApiAccountInfo } from '../lib/scraper';
@@ -39,76 +41,112 @@ const NICHES_DATA: Record<string, string[]> = {
 };
 
 const COUNTRIES_CITIES: Record<string, string[]> = {
-  "España": ["Madrid", "Barcelona"],
-  "Estados Unidos": ["Washington D.C.", "New York"],
-  "México": ["Ciudad de México", "Puebla" ,"Estado de Guerrero" ,"Estado de Hidalgo" ,"Toluca","Monterrey"],
-  "Argentina": ["Buenos Aires", "Córdoba"],
-  "Colombia": ["Bogotá", "Medellín"],
-  "Chile": ["Santiago", "Valdivia" ,"Rancagua","Machali","Concepción"],
-  "Perú": ["Lima", "Arequipa"],
-  "Reino Unido": ["Londres", "Manchester"],
-  "Francia": ["París", "Lyon"],
-  "Alemania": ["Berlín", "Múnich"],
-  "Italia": ["Roma", "Milán"],
-  "Canadá": ["Ottawa", "Toronto"],
-  "Brasil": ["Brasilia", "São Paulo"]
+  "España": ["Madrid", "Barcelona", "Valencia", "Sevilla", "Zaragoza", "Málaga", "Murcia", "Palma", "Las Palmas", "Bilbao", "Alicante", "Córdoba", "Valladolid", "Vigo", "Gijón", "Granada", "Elche", "Oviedo", "Badalona", "Cartagena"],
+  "México": ["Ciudad de México", "Guadalajara", "Monterrey", "Puebla", "Toluca", "Tijuana", "León", "Juárez", "Zapopan", "Mérida", "San Luis Potosí", "Aguascalientes", "Hermosillo", "Saltillo", "Mexicali", "Culiacán", "Querétaro", "Morelia", "Chihuahua", "Cancún", "Veracruz", "Acapulco", "Estado de Guerrero", "Estado de Hidalgo", "Oaxaca", "Tuxtla Gutiérrez", "Tepic", "Campeche", "La Paz", "Los Cabos"],
+  "Colombia": ["Bogotá", "Medellín", "Cali", "Barranquilla", "Cartagena", "Cúcuta", "Bucaramanga", "Pereira", "Santa Marta", "Ibagué", "Pasto", "Manizales", "Neiva", "Villavicencio", "Armenia", "Sincelejo", "Valledupar", "Montería", "Popayán", "Tunja"],
+  "Argentina": ["Buenos Aires", "Córdoba", "Rosario", "Mendoza", "Tucumán", "La Plata", "Mar del Plata", "Salta", "Santa Fe", "San Juan", "Resistencia", "Neuquén", "Santiago del Estero", "Corrientes", "Bahía Blanca", "Posadas", "San Salvador de Jujuy", "Paraná", "Formosa", "Río Cuarto"],
+  "Chile": ["Santiago", "Valparaíso", "Concepción", "La Serena", "Antofagasta", "Temuco", "Rancagua", "Talca", "Arica", "Iquique", "Puerto Montt", "Coquimbo", "Osorno", "Calama", "Copiapó", "Valdivia", "Punta Arenas", "Chillán", "Curicó", "Machali"],
+  "Perú": ["Lima", "Arequipa", "Trujillo", "Chiclayo", "Piura", "Iquitos", "Cusco", "Chimbote", "Huancayo", "Tacna", "Juliaca", "Ica", "Pucallpa", "Sullana", "Ayacucho", "Cajamarca", "Huánuco", "Tarapoto", "Puno", "Tumbes"],
+  "Venezuela": ["Caracas", "Maracaibo", "Valencia", "Barquisimeto", "Maracay", "Ciudad Guayana", "Barcelona", "Maturín", "Cumana", "Mérida", "San Cristóbal", "Cabimas", "Barinas", "Punto Fijo", "Los Teques"],
+  "Ecuador": ["Quito", "Guayaquil", "Cuenca", "Ambato", "Portoviejo", "Manta", "Machala", "Loja", "Santo Domingo", "Riobamba", "Esmeraldas", "Ibarra", "Latacunga", "Tulcán", "Milagro"],
+  "Bolivia": ["La Paz", "Santa Cruz", "Cochabamba", "Oruro", "Sucre", "Potosí", "Tarija", "Trinidad", "Cobija", "Riberalta"],
+  "Paraguay": ["Asunción", "Ciudad del Este", "San Lorenzo", "Luque", "Capiatá", "Lambaré", "Fernando de la Mora", "Limpio", "Ñemby", "Mariano Roque Alonso"],
+  "Uruguay": ["Montevideo", "Salto", "Ciudad de la Costa", "Paysandú", "Las Piedras", "Rivera", "Maldonado", "Tacuarembó", "Melo", "Mercedes"],
+  "Costa Rica": ["San José", "Alajuela", "Desamparados", "San Carlos", "Liberia", "Cartago", "Heredia", "Pérez Zeledón", "Puntarenas", "Nicoya"],
+  "Guatemala": ["Ciudad de Guatemala", "Mixco", "Villa Nueva", "Quetzaltenango", "Petapa", "Escuintla", "Chimaltenango", "Cobán", "Huehuetenango", "Mazatenango"],
+  "Honduras": ["Tegucigalpa", "San Pedro Sula", "Choloma", "La Ceiba", "El Progreso", "Choluteca", "Comayagua", "Puerto Cortés", "Danlí", "Juticalpa"],
+  "El Salvador": ["San Salvador", "Soyapango", "Santa Ana", "San Miguel", "Mejicanos", "Santa Tecla", "Apopa", "Delgado", "Ilopango", "Usulután"],
+  "Panamá": ["Ciudad de Panamá", "San Miguelito", "Tocumen", "David", "Las Cumbres", "Arraiján", "Colón", "La Chorrera", "Pacora", "Santiago"],
+  "República Dominicana": ["Santo Domingo", "Santiago", "San Pedro de Macorís", "La Romana", "San Francisco de Macorís", "La Vega", "San Cristóbal", "Barahona", "Puerto Plata", "Moca"],
+  "Cuba": ["La Habana", "Santiago de Cuba", "Camagüey", "Holguín", "Santa Clara", "Guantánamo", "Bayamo", "Las Tunas", "Cienfuegos", "Matanzas"],
+  "Estados Unidos": ["New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose", "Austin", "Jacksonville", "Washington D.C.", "Miami", "Atlanta", "Boston", "Seattle", "Denver", "Nashville", "Las Vegas"],
+  "Canadá": ["Toronto", "Montreal", "Vancouver", "Calgary", "Edmonton", "Ottawa", "Winnipeg", "Quebec City", "Hamilton", "Kitchener"],
+  "Brasil": ["São Paulo", "Rio de Janeiro", "Brasília", "Salvador", "Fortaleza", "Belo Horizonte", "Manaus", "Curitiba", "Recife", "Porto Alegre", "Belém", "Goiânia", "Guarulhos", "Campinas", "Maceió"],
+  "Reino Unido": ["Londres", "Birmingham", "Manchester", "Glasgow", "Liverpool", "Bristol", "Leeds", "Edinburgh", "Sheffield", "Newcastle"],
+  "Francia": ["París", "Lyon", "Marsella", "Toulouse", "Niza", "Nantes", "Estrasburgo", "Montpellier", "Burdeos", "Lille"],
+  "Alemania": ["Berlín", "Hamburgo", "Múnich", "Colonia", "Frankfurt", "Stuttgart", "Düsseldorf", "Dortmund", "Bremen", "Leipzig"],
+  "Italia": ["Roma", "Milán", "Nápoles", "Turín", "Palermo", "Génova", "Bolonia", "Florencia", "Bari", "Catania"],
+  "Portugal": ["Lisboa", "Oporto", "Vila Nova de Gaia", "Amadora", "Braga", "Funchal", "Coimbra", "Setúbal", "Almada", "Agualva-Cacém"],
+  "Australia": ["Sídney", "Melbourne", "Brisbane", "Perth", "Adelaide", "Gold Coast", "Newcastle", "Canberra", "Hobart", "Darwin"],
+  "Japón": ["Tokio", "Osaka", "Yokohama", "Nagoya", "Sapporo", "Fukuoka", "Kobe", "Kyoto", "Kawasaki", "Saitama"],
 };
 
-// ✅ Coordenadas (lat,lng) por ciudad.
-// Esto evita el error: "Unsupported location" en SerpApi.
 const CITY_LL: Record<string, string> = {
   "España|Madrid": "40.4168,-3.7038",
   "España|Barcelona": "41.3851,2.1734",
-
+  "España|Valencia": "39.4699,-0.3763",
+  "España|Sevilla": "37.3891,-5.9845",
+  "España|Málaga": "36.7213,-4.4213",
   "Estados Unidos|Washington D.C.": "38.9072,-77.0369",
   "Estados Unidos|New York": "40.7128,-74.0060",
-
+  "Estados Unidos|Los Angeles": "34.0522,-118.2437",
+  "Estados Unidos|Miami": "25.7617,-80.1918",
+  "Estados Unidos|Chicago": "41.8781,-87.6298",
   "México|Ciudad de México": "19.4326,-99.1332",
   "México|Monterrey": "25.6866,-100.3161",
-
+  "México|Guadalajara": "20.6597,-103.3496",
+  "México|Puebla": "19.0414,-98.2063",
+  "México|Cancún": "21.1619,-86.8515",
   "Argentina|Buenos Aires": "-34.6037,-58.3816",
   "Argentina|Córdoba": "-31.4201,-64.1888",
-
+  "Argentina|Rosario": "-32.9442,-60.6505",
+  "Argentina|Mendoza": "-32.8895,-68.8458",
   "Colombia|Bogotá": "4.7110,-74.0721",
   "Colombia|Medellín": "6.2442,-75.5812",
-
+  "Colombia|Cali": "3.4516,-76.5319",
+  "Colombia|Barranquilla": "10.9685,-74.7813",
+  "Colombia|Cartagena": "10.3932,-75.4832",
   "Chile|Santiago": "-33.4489,-70.6693",
   "Chile|Concepción": "-36.8201,-73.0444",
-
+  "Chile|Valparaíso": "-33.0472,-71.6127",
+  "Chile|Antofagasta": "-23.6509,-70.3975",
+  "Chile|Rancagua": "-34.1703,-70.7444",
   "Perú|Lima": "-12.0464,-77.0428",
   "Perú|Arequipa": "-16.4090,-71.5375",
-
+  "Perú|Trujillo": "-8.1116,-79.0288",
+  "Perú|Cusco": "-13.5320,-71.9675",
+  "Brasil|São Paulo": "-23.5505,-46.6333",
+  "Brasil|Rio de Janeiro": "-22.9068,-43.1729",
+  "Brasil|Brasília": "-15.7939,-47.8828",
+  "Brasil|Fortaleza": "-3.7172,-38.5433",
   "Reino Unido|Londres": "51.5074,-0.1278",
   "Reino Unido|Manchester": "53.4808,-2.2426",
-
   "Francia|París": "48.8566,2.3522",
   "Francia|Lyon": "45.7640,4.8357",
-
   "Alemania|Berlín": "52.5200,13.4050",
   "Alemania|Múnich": "48.1351,11.5820",
-
   "Italia|Roma": "41.9028,12.4964",
   "Italia|Milán": "45.4642,9.1900",
-
   "Canadá|Ottawa": "45.4215,-75.6972",
   "Canadá|Toronto": "43.6532,-79.3832",
-
-  "Brasil|Brasilia": "-15.7939,-47.8828",
-  "Brasil|São Paulo": "-23.5505,-46.6333",
+  "Venezuela|Caracas": "10.4806,-66.9036",
+  "Ecuador|Quito": "-0.1807,-78.4678",
+  "Ecuador|Guayaquil": "-2.1894,-79.8891",
+  "Bolivia|La Paz": "-16.5000,-68.1193",
+  "Bolivia|Santa Cruz": "-17.7863,-63.1812",
+  "Paraguay|Asunción": "-25.2867,-57.6470",
+  "Uruguay|Montevideo": "-34.9011,-56.1645",
+  "Costa Rica|San José": "9.9281,-84.0907",
+  "Panamá|Ciudad de Panamá": "8.9936,-79.5197",
+  "República Dominicana|Santo Domingo": "18.4861,-69.9312",
+  "Australia|Sídney": "-33.8688,151.2093",
+  "Japón|Tokio": "35.6762,139.6503",
+  "Portugal|Lisboa": "38.7223,-9.1393",
 };
 
 const Dashboard: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<"scraper" | "motor">("scraper");
+
   const [selectedNiche, setSelectedNiche] = useState<string>('');
   const [selectedSpecialty, setSelectedSpecialty] = useState<string>('');
   const [country, setCountry] = useState<string>('');
   const [city, setCity] = useState<string>('');
+  const [businessDescription, setBusinessDescription] = useState<string>('');
   const [maxLeads, setMaxLeads] = useState<number>(20);
 
-  // Motor API (SerpApi Key) - ahora también para usuario
   const [motorApiKey, setMotorApiKey] = useState<string>('');
   const [motorSavedOk, setMotorSavedOk] = useState<boolean>(false);
 
-  // Paginación y Memoria
   const [currentOffset, setCurrentOffset] = useState<number>(0);
   const [lastQuery, setLastQuery] = useState<string>('');
   const [sessionLeadsHistory, setSessionLeadsHistory] = useState<Set<string>>(new Set());
@@ -130,7 +168,6 @@ const Dashboard: React.FC = () => {
   const [results, setResults] = useState<BusinessData[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Estado para la selección por doble clic
   const [selectedLeadIndex, setSelectedLeadIndex] = useState<number | null>(null);
 
   const specialties = useMemo(() => selectedNiche ? NICHES_DATA[selectedNiche] || [] : [], [selectedNiche]);
@@ -140,7 +177,6 @@ const Dashboard: React.FC = () => {
     const savedHistory = localStorage.getItem('search_history');
     if (savedHistory) setSearchHistory(JSON.parse(savedHistory));
 
-    // ✅ Cargar API Key del usuario desde localStorage
     const savedSettings = localStorage.getItem('scraper_settings');
     if (savedSettings) {
       try {
@@ -152,7 +188,6 @@ const Dashboard: React.FC = () => {
     fetchBalance();
   }, []);
 
-  // Listener para la tecla Suprimir
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.key === 'Delete' || e.key === 'Suprimir') && selectedLeadIndex !== null) {
@@ -213,14 +248,12 @@ const Dashboard: React.FC = () => {
     return `${name}|${phone}|${address}`;
   };
 
-  // Si no viene un link directo desde SerpApi, armamos uno de Google Maps
   const buildGoogleMapsLink = (name?: string, address?: string) => {
     const q = `${name || ''} ${address || ''}`.trim();
     if (!q) return 'https://www.google.com/maps';
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
   };
 
-  // Convertimos la respuesta de SerpApi (google_maps) a tu BusinessData[]
   const normalizeSerpToBusinessData = (serpResponse: any): BusinessData[] => {
     const local = Array.isArray(serpResponse?.local_results) ? serpResponse.local_results : [];
     const out: BusinessData[] = local.map((r: any) => {
@@ -254,7 +287,6 @@ const Dashboard: React.FC = () => {
     return out.filter(x => (x.name || '').trim().length > 0);
   };
 
-  // Si el usuario usa historial ("X en Y"), lo separamos en q y location
   const splitQueryIfContainsEn = (text: string) => {
     const marker = ' en ';
     const idx = text.toLowerCase().lastIndexOf(marker);
@@ -268,8 +300,9 @@ const Dashboard: React.FC = () => {
     if (e) e.preventDefault();
 
     const nichePart = selectedSpecialty || selectedNiche;
+    const descPart = businessDescription.trim() ? ` - ${businessDescription.trim()}` : '';
     const locationPart = city && country ? `${city}, ${country}` : (city || country);
-    const finalQuery = customQuery || `${nichePart} en ${locationPart}`;
+    const finalQuery = customQuery || `${nichePart}${descPart} en ${locationPart}`;
 
     setError(null);
     if (!isLoadMore) {
@@ -287,13 +320,12 @@ const Dashboard: React.FC = () => {
 
     try {
       const savedSettings = localStorage.getItem('scraper_settings');
-      if (!savedSettings) throw new Error("Configura tu SerpApi Key en el panel 'Motor API' (arriba) y guarda.");
+      if (!savedSettings) throw new Error("Configura tu SerpApi Key en la pestaña 'Motor API' y guarda.");
       const { apiKey }: ScraperSettings = JSON.parse(savedSettings);
 
       setScrapeStatus(isLoadMore ? "Cargando más resultados..." : "Consultando Google Maps...");
 
-      // Para SerpApi, preferimos separar q/location
-      let qToUse = nichePart;
+      let qToUse = businessDescription.trim() ? `${nichePart} ${businessDescription.trim()}` : nichePart;
       let locationToUse = locationPart;
 
       if (customQuery) {
@@ -305,18 +337,16 @@ const Dashboard: React.FC = () => {
       if (!qToUse || !qToUse.trim()) throw new Error("Debes seleccionar un sector o escribir uno manualmente.");
       if (!locationToUse || !locationToUse.trim()) throw new Error("Debes seleccionar una ciudad/país o escribirlo manualmente.");
 
-      // ✅ Enviamos ll cuando tenemos ciudad+país de la lista (evita “Unsupported location”)
       const llKey = `${country}|${city}`;
       const ll = CITY_LL[llKey] || "";
 
-      // ✅ ESTA ES LA LLAMADA ÚNICA: frontend -> /api/serp
       const serpResponse = await searchWithSerp({
         apiKey,
         q: qToUse,
         location: locationToUse,
         num: maxLeads,
         start: offsetToUse,
-        // @ts-ignore (si tu tipo no incluye ll aún, esto evita error)
+        // @ts-ignore
         ll,
       });
 
@@ -368,16 +398,14 @@ const Dashboard: React.FC = () => {
     finally { setIsEnriching(false); setScrapeStatus(""); }
   };
 
-  // Función para eliminar un lead individualmente de la vista activa por su índice (Sin confirmación para mayor agilidad)
   const deleteIndividualLead = (index: number) => {
     setResults(prev => prev.filter((_, i) => i !== index));
     if (selectedLeadIndex === index) setSelectedLeadIndex(null);
   };
 
-  // Función para limpiar todos los resultados de la vista
   const clearResults = () => {
     if (results.length === 0) return;
-    if (window.confirm("¿Confirmas limpiar toda la pantalla de resultados? (El sistema recordará estos leads para no repetirlos en nuevas búsquedas de esta sesión)")) {
+    if (window.confirm("¿Confirmas limpiar toda la pantalla de resultados?")) {
       setResults([]);
       setSelectedLeadIndex(null);
     }
@@ -402,16 +430,56 @@ const Dashboard: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-8 animate-fadeIn">
 
-      {/* ✅ MOTOR API PARA USUARIO (SerpApi Key) */}
-      <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
-        <div className="p-10 space-y-6">
-          <div className="space-y-2">
-            <h2 className="text-2xl font-black text-slate-800">Configuración del Motor</h2>
-            <p className="text-slate-500 font-medium">Estamos usando SerpApi por su velocidad y gratuidad.</p>
-          </div>
+      {/* PESTAÑAS */}
+      <div className="flex border-b border-slate-200">
+        <button
+          onClick={() => setActiveTab("scraper")}
+          className={`px-6 py-4 font-bold text-sm flex items-center gap-2 transition ${
+            activeTab === "scraper"
+              ? "border-b-2 border-indigo-600 text-indigo-600"
+              : "text-slate-400 hover:text-slate-600"
+          }`}
+        >
+          <Zap className="w-4 h-4" /> Scraper
+        </button>
+        <button
+          onClick={() => setActiveTab("motor")}
+          className={`px-6 py-4 font-bold text-sm flex items-center gap-2 transition ${
+            activeTab === "motor"
+              ? "border-b-2 border-indigo-600 text-indigo-600"
+              : "text-slate-400 hover:text-slate-600"
+          }`}
+        >
+          <Settings className="w-4 h-4" /> Motor API
+        </button>
+      </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">SerpApi Key</label>
+      {/* PESTAÑA MOTOR API */}
+      {activeTab === "motor" && (
+        <div className="max-w-xl bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-xl">
+          <h2 className="text-2xl font-black text-slate-800 mb-2">Motor API</h2>
+          <p className="text-slate-500 text-sm mb-8">
+            Configura tu clave de SerpApi para activar el scraper.
+          </p>
+
+          {accountBalance && (
+            <div className="mb-6 bg-emerald-50 border border-emerald-100 rounded-2xl px-5 py-4 flex items-center gap-4">
+              <div className="bg-emerald-100 p-2 rounded-xl text-emerald-600">
+                <Database className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Búsquedas Disponibles</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-black text-slate-800">{accountBalance.left}</span>
+                  <span className="text-slate-300 font-bold">/</span>
+                  <span className="text-sm font-bold text-slate-400">{accountBalance.total}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2 mb-6">
+            <label className="text-xs font-black text-slate-400 uppercase tracking-widest">SerpApi Key</label>
             <input
               type="password"
               className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-semibold text-slate-700 focus:border-indigo-200 focus:bg-white transition"
@@ -436,295 +504,311 @@ const Dashboard: React.FC = () => {
             className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-sm transition-all hover:shadow-lg hover:bg-indigo-600 active:scale-[0.99] flex items-center justify-center gap-2"
           >
             {motorSavedOk ? (
-              <>
-                <CheckCircle2 className="w-5 h-5" /> Guardado
-              </>
+              <><CheckCircle2 className="w-5 h-5" /> Guardado</>
             ) : (
-              <>
-                Guardar Cambios
-              </>
+              "Guardar Cambios"
             )}
           </button>
         </div>
-      </div>
-
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
-        <div className="text-center md:text-left space-y-2">
-          <h1 className="text-4xl font-black text-slate-800 tracking-tight flex items-center justify-center md:justify-start gap-3">
-            <div className="bg-indigo-600 p-2 rounded-2xl shadow-lg shadow-indigo-200">
-              <Sparkles className="w-8 h-8 text-white" />
-            </div>
-            SaaSynetIA <span className="text-indigo-600">Scraper</span>
-          </h1>
-          <p className="text-slate-500 font-medium">Motor de extracción ultra-rápido impulsado por SerpApi e IA</p>
-          {scrapeStatus && <p className="text-xs font-black text-indigo-600">{scrapeStatus}</p>}
-        </div>
-
-        {accountBalance && (
-          <div className="bg-white px-6 py-4 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
-            <div className="bg-emerald-50 p-2.5 rounded-2xl text-emerald-600">
-              <Database className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Búsquedas Disponibles</p>
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-black text-slate-800">{accountBalance.left}</span>
-                <span className="text-slate-300 font-bold">/</span>
-                <span className="text-sm font-bold text-slate-400">{accountBalance.total}</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
-        <form onSubmit={(e) => handleScrape(e)} className="p-10 space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Sector</label>
-                <button type="button" onClick={() => setIsManualNiche(!isManualNiche)} className="text-indigo-500 hover:text-indigo-700 p-1">
-                  {isManualNiche ? <List className="w-3.5 h-3.5" /> : <Edit2 className="w-3.5 h-3.5" />}
-                </button>
-              </div>
-              {isManualNiche ? (
-                <input type="text" className="w-full p-4 bg-slate-50 border-2 border-indigo-100 rounded-2xl outline-none font-semibold text-slate-700" placeholder="Escribe el sector..." value={selectedNiche} onChange={(e) => setSelectedNiche(e.target.value)} />
-              ) : (
-                <select className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-semibold text-slate-700" value={selectedNiche} onChange={(e) => setSelectedNiche(e.target.value)}>
-                  <option value="">Selecciona Nicho</option>
-                  {Object.keys(NICHES_DATA).map(n => <option key={n} value={n}>{n}</option>)}
-                </select>
-              )}
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Especialidad</label>
-                <button type="button" onClick={() => setIsManualSpecialty(!isManualSpecialty)} className="text-indigo-500 hover:text-indigo-700 p-1">
-                  {isManualSpecialty ? <List className="w-3.5 h-3.5" /> : <Edit2 className="w-3.5 h-3.5" />}
-                </button>
-              </div>
-              {isManualSpecialty ? (
-                <input type="text" className="w-full p-4 bg-slate-50 border-2 border-indigo-100 rounded-2xl outline-none font-semibold text-slate-700" placeholder="Escribe especialidad..." value={selectedSpecialty} onChange={(e) => setSelectedSpecialty(e.target.value)} />
-              ) : (
-                <select className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-semibold text-slate-700 disabled:opacity-40" value={selectedSpecialty} onChange={(e) => setSelectedSpecialty(e.target.value)} disabled={!selectedNiche}>
-                  <option value="">Todo el sector</option>
-                  {specialties.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              )}
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">País</label>
-                <button type="button" onClick={() => setIsManualCountry(!isManualCountry)} className="text-indigo-500 hover:text-indigo-700 p-1">
-                  {isManualCountry ? <List className="w-3.5 h-3.5" /> : <Edit2 className="w-3.5 h-3.5" />}
-                </button>
-              </div>
-              {isManualCountry ? (
-                <input type="text" className="w-full p-4 bg-slate-50 border-2 border-indigo-100 rounded-2xl outline-none font-semibold text-slate-700" placeholder="Escribe el país..." value={country} onChange={(e) => setCountry(e.target.value)} />
-              ) : (
-                <select className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-semibold text-slate-700" value={country} onChange={(e) => setCountry(e.target.value)}>
-                  <option value="">Selecciona País</option>
-                  {Object.keys(COUNTRIES_CITIES).map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              )}
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Ciudad</label>
-                <button type="button" onClick={() => setIsManualCity(!isManualCity)} className="text-indigo-500 hover:text-indigo-700 p-1">
-                  {isManualCity ? <List className="w-3.5 h-3.5" /> : <Edit2 className="w-3.5 h-3.5" />}
-                </button>
-              </div>
-              {isManualCity ? (
-                <input type="text" className="w-full p-4 bg-slate-50 border-2 border-indigo-100 rounded-2xl outline-none font-semibold text-slate-700" placeholder="Escribe la ciudad..." value={city} onChange={(e) => setCity(e.target.value)} />
-              ) : (
-                <select className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-semibold text-slate-700 disabled:opacity-40" value={city} onChange={(e) => setCity(e.target.value)} disabled={!country}>
-                  <option value="">Selecciona Ciudad</option>
-                  {availableCities.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              )}
-            </div>
-          </div>
-
-          <div className="flex flex-col md:flex-row items-center justify-center gap-6 pt-4">
-            <div className="flex flex-col items-center gap-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cantidad por página</label>
-              <div className="flex items-center bg-slate-100 rounded-2xl p-1 gap-1">
-                {[10, 20].map(val => (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => setMaxLeads(val)}
-                    className={`px-5 py-2 rounded-xl text-xs font-black transition-all ${maxLeads === val ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white'}`}
-                  >
-                    {val}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isScraping || isEnriching || (!selectedNiche && !isManualNiche) || (!city && !isManualCity)}
-              className="group relative bg-slate-900 text-white px-16 py-5 rounded-2xl font-black text-lg flex items-center gap-4 hover:bg-indigo-600 shadow-2xl disabled:opacity-50 transition-all active:scale-95"
-            >
-              {isScraping ? <Loader2 className="w-6 h-6 animate-spin text-indigo-400" /> : <Search className="w-6 h-6 group-hover:scale-110 transition" />}
-              <span>{isScraping ? "Extrayendo..." : "Iniciar Extracción Única"}</span>
-            </button>
-          </div>
-
-          {searchHistory.length > 0 && (
-            <div className="flex flex-wrap items-center justify-center gap-3 pt-4 border-t border-slate-50">
-              <span className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-1"> <History className="w-3 h-3" /> Recientes: </span>
-              {searchHistory.map((q, i) => (
-                <button key={i} type="button" onClick={() => handleScrape(undefined, q)} className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-bold hover:bg-indigo-100 transition"> {q.split(' en ')[0]}... </button>
-              ))}
-            </div>
-          )}
-        </form>
-      </div>
-
-      {error && (
-        <div className="p-6 bg-rose-50 border-2 border-rose-100 text-rose-700 rounded-3xl flex items-center gap-4 animate-shake">
-          <AlertTriangle className="w-8 h-8 shrink-0" />
-          <div>
-            <p className="font-black text-sm uppercase">Atención</p>
-            <p className="text-xs font-medium">{error}</p>
-          </div>
-        </div>
       )}
 
-      {results.length > 0 && (
-        <div className="space-y-8 animate-slideUp">
-          <div className="flex flex-col md:flex-row justify-between items-end gap-6">
-            <div className="space-y-1">
-              <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
-                <CheckCircle2 className="w-6 h-6 text-emerald-500" /> Base de Leads ({results.length})
-              </h3>
-              <div className="flex items-center gap-4">
-                <p className="text-slate-500 text-sm font-medium">Prospectos acumulados en esta sesión. Doble clic para seleccionar y Suprimir para borrar.</p>
-                {filteredCount > 0 && (
-                  <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-black uppercase border border-amber-100">
-                    <FilterX className="w-3 h-3" /> {filteredCount} duplicados omitidos
-                  </span>
-                )}
-              </div>
+      {/* PESTAÑA SCRAPER */}
+      {activeTab === "scraper" && (
+        <>
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
+            <div className="text-center md:text-left space-y-2">
+              <h1 className="text-4xl font-black text-slate-800 tracking-tight flex items-center justify-center md:justify-start gap-3">
+                <div className="bg-indigo-600 p-2 rounded-2xl shadow-lg shadow-indigo-200">
+                  <Sparkles className="w-8 h-8 text-white" />
+                </div>
+                SaaSynetIA <span className="text-indigo-600">Scraper</span>
+              </h1>
+              <p className="text-slate-500 font-medium">Motor de extracción ultra-rápido impulsado por SerpApi e IA</p>
+              {scrapeStatus && <p className="text-xs font-black text-indigo-600">{scrapeStatus}</p>}
             </div>
-            <div className="flex flex-wrap gap-3 w-full md:w-auto">
-              <button onClick={handleAIEnrichment} disabled={isEnriching || isScraping} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white px-6 py-4 rounded-2xl font-black text-sm disabled:opacity-50 transition-all hover:shadow-lg">
-                <BrainCircuit className="w-5 h-5" /> {isEnriching ? "IA Pensando..." : "Enriquecer con IA"}
-              </button>
-              <button onClick={exportToExcel} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-emerald-500 text-white px-6 py-4 rounded-2xl font-black text-sm transition-all hover:shadow-lg">
-                <Download className="w-5 h-5" /> Exportar
-              </button>
 
-              <button
-                type="button"
-                onClick={clearResults}
-                disabled={results.length === 0 || isScraping}
-                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-rose-50 text-rose-600 hover:bg-rose-100 disabled:opacity-40 disabled:cursor-not-allowed border border-rose-200 px-6 py-4 rounded-2xl font-black text-sm transition-all active:scale-95 shadow-sm"
-              >
-                <Trash2 className="w-5 h-5" /> Borrar Vista
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {results.map((item, idx) => {
-              const leadUniqueId = getLeadIdentifier(item);
-              const cardId = `lead-card-${idx}`;
-              const cardKey = `${leadUniqueId}-${idx}`;
-              const isSelected = selectedLeadIndex === idx;
-
-              return (
-                <div
-                  key={cardKey}
-                  onDoubleClick={() => setSelectedLeadIndex(isSelected ? null : idx)}
-                  className={`p-8 rounded-[2rem] border-2 transition-all group relative flex flex-col h-full overflow-hidden cursor-pointer ${isSelected ? 'bg-indigo-50/30 border-indigo-500 shadow-2xl ring-4 ring-indigo-100 scale-[1.02]' : 'bg-white border-slate-100 shadow-sm hover:shadow-xl'}`}
-                >
-                  {/* Botón X Individual Habilitado e Inmediato */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      deleteIndividualLead(idx);
-                    }}
-                    className="absolute top-4 right-4 p-2 bg-rose-50 text-rose-500 hover:text-rose-700 rounded-xl transition-all z-30 opacity-100 md:opacity-0 md:group-hover:opacity-100 flex items-center justify-center border border-rose-100"
-                    title="Eliminar este lead de la vista"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-
-                  {item.aiScore && (
-                    <div className={`absolute top-0 left-0 px-5 py-2 text-[10px] font-black uppercase rounded-tl-[2rem] rounded-br-2xl ${item.aiScore === 'Premium' ? 'bg-amber-400 text-white' : 'bg-slate-800 text-white'}`}> {item.aiScore} Lead </div>
-                  )}
-                  <div className="mb-6 pt-4">
-                    <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl uppercase tracking-widest"> {item.categoryName} </span>
-                    <h4 className="text-xl font-black text-slate-800 line-clamp-2 mt-4 leading-tight">{item.name}</h4>
-                    {item.stars && (
-                      <div className="flex items-center gap-1.5 mt-2">
-                        <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                        <span className="text-amber-700 font-black text-xs">{item.stars}</span>
-                        <span className="text-slate-400 text-[10px] font-bold">({item.reviewsCount} reseñas)</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-4 text-sm flex-grow">
-                    <div className="flex items-start gap-3 text-slate-500">
-                      <MapPin className="w-5 h-5 shrink-0 text-slate-300" />
-                      <span className="text-xs font-medium">{item.address || item.fullAddress}</span>
-                    </div>
-                    {item.phone && item.phone !== "No disponible" && (
-                      <div className="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-transparent hover:border-indigo-100 hover:bg-white transition-all group/phone">
-                        <div className="flex items-center gap-3">
-                          <Phone className="w-4 h-4 text-indigo-500" />
-                          <a href={`tel:${item.phone}`} className="text-sm font-black tracking-tight text-slate-800 hover:text-indigo-600 transition-colors">
-                            {item.phone}
-                          </a>
-                        </div>
-                        <button onClick={(e) => { e.stopPropagation(); handleCopyPhone(item.phone || '', cardId); }} className="p-2 text-slate-300 hover:text-indigo-500 transition-colors">
-                          {copiedId === cardId ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  {item.aiSummary && (
-                    <div className="mt-6 bg-violet-50 p-5 rounded-3xl border border-violet-100">
-                      <p className="text-[10px] font-black text-violet-600 uppercase mb-2"> Análisis Gemini </p>
-                      <p className="text-xs text-violet-900 italic font-bold">"{item.aiSummary}"</p>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between pt-6 mt-6 border-t border-slate-50">
-                    {item.website ? (
-                      <a href={item.website} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-indigo-600 text-[11px] font-black flex items-center gap-2 uppercase hover:underline"> <Globe className="w-4 h-4" /> Visitar Web </a>
-                    ) : <span className="text-slate-300 text-[10px] font-black uppercase">Sin Sitio Web</span>}
-                    <a href={item.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="bg-slate-50 p-3 rounded-2xl text-slate-400 hover:text-indigo-600 transition-all hover:bg-indigo-50"> <ExternalLink className="w-5 h-5" /> </a>
+            {accountBalance && (
+              <div className="bg-white px-6 py-4 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
+                <div className="bg-emerald-50 p-2.5 rounded-2xl text-emerald-600">
+                  <Database className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Búsquedas Disponibles</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-black text-slate-800">{accountBalance.left}</span>
+                    <span className="text-slate-300 font-bold">/</span>
+                    <span className="text-sm font-bold text-slate-400">{accountBalance.total}</span>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            )}
           </div>
 
-          <div className="flex justify-center pt-12 pb-24">
-            <button
-              onClick={() => handleScrape(undefined, lastQuery, true)}
-              disabled={isScraping || results.length === 0}
-              className="group flex flex-col items-center gap-4 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
-            >
-              <div className="bg-slate-900 text-white w-20 h-20 rounded-full flex items-center justify-center shadow-2xl shadow-indigo-200 group-hover:bg-indigo-600 transition-colors">
-                {isScraping ? <Loader2 className="w-8 h-8 animate-spin" /> : <PlusCircle className="w-10 h-10" />}
+          <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
+            <form onSubmit={(e) => handleScrape(e)} className="p-10 space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Sector</label>
+                    <button type="button" onClick={() => setIsManualNiche(!isManualNiche)} className="text-indigo-500 hover:text-indigo-700 p-1">
+                      {isManualNiche ? <List className="w-3.5 h-3.5" /> : <Edit2 className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                  {isManualNiche ? (
+                    <input type="text" className="w-full p-4 bg-slate-50 border-2 border-indigo-100 rounded-2xl outline-none font-semibold text-slate-700" placeholder="Escribe el sector..." value={selectedNiche} onChange={(e) => setSelectedNiche(e.target.value)} />
+                  ) : (
+                    <select className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-semibold text-slate-700" value={selectedNiche} onChange={(e) => setSelectedNiche(e.target.value)}>
+                      <option value="">Selecciona Nicho</option>
+                      {Object.keys(NICHES_DATA).map(n => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Especialidad</label>
+                    <button type="button" onClick={() => setIsManualSpecialty(!isManualSpecialty)} className="text-indigo-500 hover:text-indigo-700 p-1">
+                      {isManualSpecialty ? <List className="w-3.5 h-3.5" /> : <Edit2 className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                  {isManualSpecialty ? (
+                    <input type="text" className="w-full p-4 bg-slate-50 border-2 border-indigo-100 rounded-2xl outline-none font-semibold text-slate-700" placeholder="Escribe especialidad..." value={selectedSpecialty} onChange={(e) => setSelectedSpecialty(e.target.value)} />
+                  ) : (
+                    <select className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-semibold text-slate-700 disabled:opacity-40" value={selectedSpecialty} onChange={(e) => setSelectedSpecialty(e.target.value)} disabled={!selectedNiche}>
+                      <option value="">Todo el sector</option>
+                      {specialties.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">País</label>
+                    <button type="button" onClick={() => setIsManualCountry(!isManualCountry)} className="text-indigo-500 hover:text-indigo-700 p-1">
+                      {isManualCountry ? <List className="w-3.5 h-3.5" /> : <Edit2 className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                  {isManualCountry ? (
+                    <input type="text" className="w-full p-4 bg-slate-50 border-2 border-indigo-100 rounded-2xl outline-none font-semibold text-slate-700" placeholder="Escribe el país..." value={country} onChange={(e) => setCountry(e.target.value)} />
+                  ) : (
+                    <select className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-semibold text-slate-700" value={country} onChange={(e) => { setCountry(e.target.value); setCity(''); }}>
+                      <option value="">Selecciona País</option>
+                      {Object.keys(COUNTRIES_CITIES).sort().map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Ciudad</label>
+                    <button type="button" onClick={() => setIsManualCity(!isManualCity)} className="text-indigo-500 hover:text-indigo-700 p-1">
+                      {isManualCity ? <List className="w-3.5 h-3.5" /> : <Edit2 className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                  {isManualCity ? (
+                    <input type="text" className="w-full p-4 bg-slate-50 border-2 border-indigo-100 rounded-2xl outline-none font-semibold text-slate-700" placeholder="Escribe la ciudad..." value={city} onChange={(e) => setCity(e.target.value)} />
+                  ) : (
+                    <select className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-semibold text-slate-700 disabled:opacity-40" value={city} onChange={(e) => setCity(e.target.value)} disabled={!country || isManualCountry}>
+                      <option value="">Selecciona Ciudad</option>
+                      {availableCities.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  )}
+                </div>
               </div>
-              <div className="text-center">
-                <p className="font-black text-slate-800 uppercase tracking-tighter">Extraer más leads frescos</p>
-                <p className="text-[10px] font-bold text-slate-400 italic">Siguiente página de Google Maps (20+ resultados)</p>
+
+              {/* CAMPO DESCRIPCIÓN DE NEGOCIO */}
+              <div className="space-y-3">
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                  Descripción específica del negocio <span className="text-slate-300 font-medium normal-case">(opcional)</span>
+                </label>
+                <input
+                  type="text"
+                  className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-semibold text-slate-700 focus:border-indigo-200 focus:bg-white transition"
+                  placeholder="Ej: clínica dental con ortodoncia, restaurante de mariscos, gym con piscina..."
+                  value={businessDescription}
+                  onChange={(e) => setBusinessDescription(e.target.value)}
+                />
+                <p className="text-[10px] text-slate-400 font-medium">
+                  Añade detalles para afinar la búsqueda. Se combina con el sector seleccionado.
+                </p>
               </div>
-            </button>
+
+              <div className="flex flex-col md:flex-row items-center justify-center gap-6 pt-4">
+                <div className="flex flex-col items-center gap-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cantidad por página</label>
+                  <div className="flex items-center bg-slate-100 rounded-2xl p-1 gap-1">
+                    {[10, 20].map(val => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setMaxLeads(val)}
+                        className={`px-5 py-2 rounded-xl text-xs font-black transition-all ${maxLeads === val ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white'}`}
+                      >
+                        {val}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isScraping || isEnriching || (!selectedNiche && !isManualNiche) || (!city && !isManualCity)}
+                  className="group relative bg-slate-900 text-white px-16 py-5 rounded-2xl font-black text-lg flex items-center gap-4 hover:bg-indigo-600 shadow-2xl disabled:opacity-50 transition-all active:scale-95"
+                >
+                  {isScraping ? <Loader2 className="w-6 h-6 animate-spin text-indigo-400" /> : <Search className="w-6 h-6 group-hover:scale-110 transition" />}
+                  <span>{isScraping ? "Extrayendo..." : "Iniciar Extracción Única"}</span>
+                </button>
+              </div>
+
+              {searchHistory.length > 0 && (
+                <div className="flex flex-wrap items-center justify-center gap-3 pt-4 border-t border-slate-50">
+                  <span className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-1"> <History className="w-3 h-3" /> Recientes: </span>
+                  {searchHistory.map((q, i) => (
+                    <button key={i} type="button" onClick={() => handleScrape(undefined, q)} className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-bold hover:bg-indigo-100 transition"> {q.split(' en ')[0]}... </button>
+                  ))}
+                </div>
+              )}
+            </form>
           </div>
-        </div>
+
+          {error && (
+            <div className="p-6 bg-rose-50 border-2 border-rose-100 text-rose-700 rounded-3xl flex items-center gap-4 animate-shake">
+              <AlertTriangle className="w-8 h-8 shrink-0" />
+              <div>
+                <p className="font-black text-sm uppercase">Atención</p>
+                <p className="text-xs font-medium">{error}</p>
+              </div>
+            </div>
+          )}
+
+          {results.length > 0 && (
+            <div className="space-y-8 animate-slideUp">
+              <div className="flex flex-col md:flex-row justify-between items-end gap-6">
+                <div className="space-y-1">
+                  <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
+                    <CheckCircle2 className="w-6 h-6 text-emerald-500" /> Base de Leads ({results.length})
+                  </h3>
+                  <div className="flex items-center gap-4">
+                    <p className="text-slate-500 text-sm font-medium">Prospectos acumulados en esta sesión. Doble clic para seleccionar y Suprimir para borrar.</p>
+                    {filteredCount > 0 && (
+                      <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-black uppercase border border-amber-100">
+                        <FilterX className="w-3 h-3" /> {filteredCount} duplicados omitidos
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-3 w-full md:w-auto">
+                  <button onClick={handleAIEnrichment} disabled={isEnriching || isScraping} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white px-6 py-4 rounded-2xl font-black text-sm disabled:opacity-50 transition-all hover:shadow-lg">
+                    <BrainCircuit className="w-5 h-5" /> {isEnriching ? "IA Pensando..." : "Enriquecer con IA"}
+                  </button>
+                  <button onClick={exportToExcel} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-emerald-500 text-white px-6 py-4 rounded-2xl font-black text-sm transition-all hover:shadow-lg">
+                    <Download className="w-5 h-5" /> Exportar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearResults}
+                    disabled={results.length === 0 || isScraping}
+                    className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-rose-50 text-rose-600 hover:bg-rose-100 disabled:opacity-40 disabled:cursor-not-allowed border border-rose-200 px-6 py-4 rounded-2xl font-black text-sm transition-all active:scale-95 shadow-sm"
+                  >
+                    <Trash2 className="w-5 h-5" /> Borrar Vista
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {results.map((item, idx) => {
+                  const leadUniqueId = getLeadIdentifier(item);
+                  const cardId = `lead-card-${idx}`;
+                  const cardKey = `${leadUniqueId}-${idx}`;
+                  const isSelected = selectedLeadIndex === idx;
+
+                  return (
+                    <div
+                      key={cardKey}
+                      onDoubleClick={() => setSelectedLeadIndex(isSelected ? null : idx)}
+                      className={`p-8 rounded-[2rem] border-2 transition-all group relative flex flex-col h-full overflow-hidden cursor-pointer ${isSelected ? 'bg-indigo-50/30 border-indigo-500 shadow-2xl ring-4 ring-indigo-100 scale-[1.02]' : 'bg-white border-slate-100 shadow-sm hover:shadow-xl'}`}
+                    >
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          deleteIndividualLead(idx);
+                        }}
+                        className="absolute top-4 right-4 p-2 bg-rose-50 text-rose-500 hover:text-rose-700 rounded-xl transition-all z-30 opacity-100 md:opacity-0 md:group-hover:opacity-100 flex items-center justify-center border border-rose-100"
+                        title="Eliminar este lead de la vista"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+
+                      {item.aiScore && (
+                        <div className={`absolute top-0 left-0 px-5 py-2 text-[10px] font-black uppercase rounded-tl-[2rem] rounded-br-2xl ${item.aiScore === 'Premium' ? 'bg-amber-400 text-white' : 'bg-slate-800 text-white'}`}> {item.aiScore} Lead </div>
+                      )}
+                      <div className="mb-6 pt-4">
+                        <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl uppercase tracking-widest"> {item.categoryName} </span>
+                        <h4 className="text-xl font-black text-slate-800 line-clamp-2 mt-4 leading-tight">{item.name}</h4>
+                        {item.stars && (
+                          <div className="flex items-center gap-1.5 mt-2">
+                            <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                            <span className="text-amber-700 font-black text-xs">{item.stars}</span>
+                            <span className="text-slate-400 text-[10px] font-bold">({item.reviewsCount} reseñas)</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-4 text-sm flex-grow">
+                        <div className="flex items-start gap-3 text-slate-500">
+                          <MapPin className="w-5 h-5 shrink-0 text-slate-300" />
+                          <span className="text-xs font-medium">{item.address || item.fullAddress}</span>
+                        </div>
+                        {item.phone && item.phone !== "No disponible" && (
+                          <div className="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-transparent hover:border-indigo-100 hover:bg-white transition-all group/phone">
+                            <div className="flex items-center gap-3">
+                              <Phone className="w-4 h-4 text-indigo-500" />
+                              <a href={`tel:${item.phone}`} className="text-sm font-black tracking-tight text-slate-800 hover:text-indigo-600 transition-colors">
+                                {item.phone}
+                              </a>
+                            </div>
+                            <button onClick={(e) => { e.stopPropagation(); handleCopyPhone(item.phone || '', cardId); }} className="p-2 text-slate-300 hover:text-indigo-500 transition-colors">
+                              {copiedId === cardId ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {item.aiSummary && (
+                        <div className="mt-6 bg-violet-50 p-5 rounded-3xl border border-violet-100">
+                          <p className="text-[10px] font-black text-violet-600 uppercase mb-2"> Análisis Gemini </p>
+                          <p className="text-xs text-violet-900 italic font-bold">"{item.aiSummary}"</p>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between pt-6 mt-6 border-t border-slate-50">
+                        {item.website ? (
+                          <a href={item.website} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-indigo-600 text-[11px] font-black flex items-center gap-2 uppercase hover:underline"> <Globe className="w-4 h-4" /> Visitar Web </a>
+                        ) : <span className="text-slate-300 text-[10px] font-black uppercase">Sin Sitio Web</span>}
+                        <a href={item.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="bg-slate-50 p-3 rounded-2xl text-slate-400 hover:text-indigo-600 transition-all hover:bg-indigo-50"> <ExternalLink className="w-5 h-5" /> </a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex justify-center pt-12 pb-24">
+                <button
+                  onClick={() => handleScrape(undefined, lastQuery, true)}
+                  disabled={isScraping || results.length === 0}
+                  className="group flex flex-col items-center gap-4 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+                >
+                  <div className="bg-slate-900 text-white w-20 h-20 rounded-full flex items-center justify-center shadow-2xl shadow-indigo-200 group-hover:bg-indigo-600 transition-colors">
+                    {isScraping ? <Loader2 className="w-8 h-8 animate-spin" /> : <PlusCircle className="w-10 h-10" />}
+                  </div>
+                  <div className="text-center">
+                    <p className="font-black text-slate-800 uppercase tracking-tighter">Extraer más leads frescos</p>
+                    <p className="text-[10px] font-bold text-slate-400 italic">Siguiente página de Google Maps (20+ resultados)</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
