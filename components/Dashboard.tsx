@@ -41,10 +41,10 @@ const NICHES_DATA: Record<string, string[]> = {
 const COUNTRIES_CITIES: Record<string, string[]> = {
   "España": ["Madrid", "Barcelona"],
   "Estados Unidos": ["Washington D.C.", "New York"],
-  "México": ["Ciudad de México", "Toluca","Monterrey"],
+  "México": ["Ciudad de México", "Puebla" ,"Estado de Guerrero" ,"Estado de Hidalgo" ,"Toluca","Monterrey"],
   "Argentina": ["Buenos Aires", "Córdoba"],
   "Colombia": ["Bogotá", "Medellín"],
-  "Chile": ["Santiago", "Rancagua","Machali","Concepción"],
+  "Chile": ["Santiago", "Valdivia" ,"Rancagua","Machali","Concepción"],
   "Perú": ["Lima", "Arequipa"],
   "Reino Unido": ["Londres", "Manchester"],
   "Francia": ["París", "Lyon"],
