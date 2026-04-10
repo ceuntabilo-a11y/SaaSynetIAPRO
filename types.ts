@@ -1,4 +1,3 @@
-
 export interface AccessCode {
   id: string;
   code: string;
@@ -25,6 +24,7 @@ export interface BusinessData {
   aiSummary?: string;
   aiNiche?: string;
   aiSentiment?: string;
+  aiDicom?: boolean;
 }
 
 export type AppView = 'login' | 'admin' | 'dashboard' | 'config';

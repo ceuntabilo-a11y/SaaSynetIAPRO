@@ -1,28 +1,46 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { BusinessData } from "../types";
 
 export const enrichLeadsWithAI = async (leads: BusinessData[]): Promise<BusinessData[]> => {
   if (leads.length === 0) return [];
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
-  // Preparamos un prompt masivo para optimizar tokens
-  const prompt = `Analiza la siguiente lista de negocios extraídos de Google Maps. 
-  Para cada negocio, determina:
-  1. aiScore: 'Premium' (si tiene muchas reseñas y web), 'Estándar' o 'Bajo'.
-  2. aiNiche: Clasificación b2b o b2c.
-  3. aiSentiment: Sentimiento general basado en estrellas.
-  4. aiSummary: Un resumen de 10 palabras sobre su potencial cliente.
+  const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY || "";
+  if (!apiKey) {
+    console.error("No se encontró GEMINI_API_KEY");
+    return leads;
+  }
 
-  Lista de negocios:
-  ${leads.map((l, i) => `${i}: ${l.name} | Cat: ${l.categoryName} | Stars: ${l.stars}`).join('\n')}
-  
-  Devuelve un JSON estrictamente con este formato: [{ id: number, aiScore: string, aiSummary: string, aiNiche: string, aiSentiment: string }]`;
+  const ai = new GoogleGenAI({ apiKey });
+
+  const prompt = `Eres un experto en prospección B2B para una agencia de automatización e inteligencia artificial llamada SynetIA.
+
+Tu tarea es analizar negocios extraídos de Google Maps y evaluar su potencial como clientes para estos servicios:
+1. Automatizaciones y bots de WhatsApp / atención al cliente
+2. Sistemas de gestión digital (agendas, CRM, dashboards)
+3. SynetIA DICOM Relay: plataforma de transmisión segura de estudios de imagenología médica (radiografías, tomografías, resonancias) directamente al médico tratante — ideal para clínicas radiológicas, centros de imagen, hospitales, clínicas dentales con rayos X, veterinarias con diagnóstico por imagen
+
+Para cada negocio analiza:
+- Si tiene web o no (sin web = oportunidad digital alta)
+- Si su categoría sugiere uso de tomografía/imagenología (radiología, clínica dental, veterinaria, hospital, ortopedia, neurología, oncología)
+- Su potencial para automatizaciones según el sector
+- Un resumen como si fuera un pitch de venta corto
+
+Lista de negocios:
+${leads.map((l, i) => `${i}: Nombre: "${l.name}" | Categoría: "${l.categoryName}" | Estrellas: ${l.stars || 'N/A'} | Reseñas: ${l.reviewsCount || '0'} | Web: ${l.website ? 'SÍ' : 'NO'} | Dirección: "${l.address || ''}"`).join('\n')}
+
+Para cada negocio devuelve:
+- id: número del negocio
+- aiScore: "Premium" (alto potencial, muchas reseñas o sector médico/dental), "Estándar" (potencial medio), "Bajo" (poco potencial)
+- aiSummary: resumen de máximo 20 palabras enfocado en oportunidad de venta. Ejemplo: "Clínica dental sin web, ideal para bot de citas y relay DICOM de radiografías"
+- aiNiche: "Médico-DICOM" (si usa imagenología), "Automatización" (si aplica bot/CRM), "Digital" (si necesita presencia web), "Multi-servicio" (si aplica todo)
+- aiSentiment: "Positivo", "Neutro" o "Negativo" según sus reseñas y estrellas
+- aiDicom: true si el negocio podría necesitar SynetIA DICOM (clínica dental, radiología, veterinaria, hospital, centro médico con imagen), false si no
+
+Devuelve SOLO un JSON válido sin markdown ni texto adicional.`;
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-1.5-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -35,16 +53,17 @@ export const enrichLeadsWithAI = async (leads: BusinessData[]): Promise<Business
               aiScore: { type: Type.STRING },
               aiSummary: { type: Type.STRING },
               aiNiche: { type: Type.STRING },
-              aiSentiment: { type: Type.STRING }
+              aiSentiment: { type: Type.STRING },
+              aiDicom: { type: Type.BOOLEAN }
             },
-            required: ["id", "aiScore", "aiSummary", "aiNiche", "aiSentiment"]
+            required: ["id", "aiScore", "aiSummary", "aiNiche", "aiSentiment", "aiDicom"]
           }
         }
       }
     });
 
     const aiResults = JSON.parse(response.text || "[]");
-    
+
     return leads.map((lead, index) => {
       const enrichment = aiResults.find((r: any) => r.id === index);
       return enrichment ? { ...lead, ...enrichment } : lead;

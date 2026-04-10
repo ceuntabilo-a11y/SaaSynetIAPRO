@@ -741,6 +741,11 @@ const Dashboard: React.FC = () => {
                         <X className="w-5 h-5" />
                       </button>
 
+                      {item.aiDicom && (
+                        <div className="absolute top-0 right-12 px-3 py-1 text-[10px] font-black uppercase rounded-bl-2xl rounded-br-2xl bg-blue-600 text-white z-20">
+                          🏥 DICOM
+                        </div>
+                      )}
                       {item.aiScore && (
                         <div className={`absolute top-0 left-0 px-5 py-2 text-[10px] font-black uppercase rounded-tl-[2rem] rounded-br-2xl ${item.aiScore === 'Premium' ? 'bg-amber-400 text-white' : 'bg-slate-800 text-white'}`}> {item.aiScore} Lead </div>
                       )}
@@ -776,7 +781,12 @@ const Dashboard: React.FC = () => {
                       </div>
                       {item.aiSummary && (
                         <div className="mt-6 bg-violet-50 p-5 rounded-3xl border border-violet-100">
-                          <p className="text-[10px] font-black text-violet-600 uppercase mb-2"> Análisis Gemini </p>
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-[10px] font-black text-violet-600 uppercase">Análisis Gemini</p>
+                            {item.aiNiche && (
+                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-violet-200 text-violet-700">{item.aiNiche}</span>
+                            )}
+                          </div>
                           <p className="text-xs text-violet-900 italic font-bold">"{item.aiSummary}"</p>
                         </div>
                       )}
