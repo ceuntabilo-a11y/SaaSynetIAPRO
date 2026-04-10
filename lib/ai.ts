@@ -40,7 +40,7 @@ Devuelve SOLO un JSON válido sin markdown ni texto adicional.`;
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.0-flash-lite",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
