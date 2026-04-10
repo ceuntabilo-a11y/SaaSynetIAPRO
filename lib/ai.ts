@@ -4,9 +4,9 @@ import { BusinessData } from "../types";
 export const enrichLeadsWithAI = async (leads: BusinessData[]): Promise<BusinessData[]> => {
   if (leads.length === 0) return [];
 
-  const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY || "";
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "";
   if (!apiKey) {
-    console.error("No se encontró GEMINI_API_KEY");
+    console.error("No se encontró VITE_GEMINI_API_KEY");
     return leads;
   }
 
