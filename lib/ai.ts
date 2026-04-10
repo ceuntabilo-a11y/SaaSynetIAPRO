@@ -1,16 +1,13 @@
-import { GoogleGenAI, Type } from "@google/genai";
 import { BusinessData } from "../types";
 
 export const enrichLeadsWithAI = async (leads: BusinessData[]): Promise<BusinessData[]> => {
   if (leads.length === 0) return [];
 
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "";
+  const apiKey = import.meta.env.VITE_GROQ_API_KEY || "";
   if (!apiKey) {
-    console.error("No se encontró VITE_GEMINI_API_KEY");
+    console.error("No se encontró VITE_GROQ_API_KEY");
     return leads;
   }
-
-  const ai = new GoogleGenAI({ apiKey });
 
   const prompt = `Eres un experto en prospección B2B para una agencia de automatización e inteligencia artificial llamada SynetIA.
 
@@ -21,48 +18,54 @@ Tu tarea es analizar negocios extraídos de Google Maps y evaluar su potencial c
 
 Para cada negocio analiza:
 - Si tiene web o no (sin web = oportunidad digital alta)
-- Si su categoría sugiere uso de tomografía/imagenología (radiología, clínica dental, veterinaria, hospital, ortopedia, neurología, oncología)
+- Si su categoría sugiere uso de tomografía/imagenología
 - Su potencial para automatizaciones según el sector
-- Un resumen como si fuera un pitch de venta corto
+- Un resumen como pitch de venta corto
 
 Lista de negocios:
 ${leads.map((l, i) => `${i}: Nombre: "${l.name}" | Categoría: "${l.categoryName}" | Estrellas: ${l.stars || 'N/A'} | Reseñas: ${l.reviewsCount || '0'} | Web: ${l.website ? 'SÍ' : 'NO'} | Dirección: "${l.address || ''}"`).join('\n')}
 
-Para cada negocio devuelve:
-- id: número del negocio
-- aiScore: "Premium" (alto potencial, muchas reseñas o sector médico/dental), "Estándar" (potencial medio), "Bajo" (poco potencial)
-- aiSummary: resumen de máximo 20 palabras enfocado en oportunidad de venta. Ejemplo: "Clínica dental sin web, ideal para bot de citas y relay DICOM de radiografías"
-- aiNiche: "Médico-DICOM" (si usa imagenología), "Automatización" (si aplica bot/CRM), "Digital" (si necesita presencia web), "Multi-servicio" (si aplica todo)
-- aiSentiment: "Positivo", "Neutro" o "Negativo" según sus reseñas y estrellas
-- aiDicom: true si el negocio podría necesitar SynetIA DICOM (clínica dental, radiología, veterinaria, hospital, centro médico con imagen), false si no
+Devuelve SOLO un array JSON válido sin markdown ni texto adicional con este formato exacto:
+[{"id":0,"aiScore":"Premium","aiSummary":"resumen aquí","aiNiche":"Médico-DICOM","aiSentiment":"Positivo","aiDicom":true}]
 
-Devuelve SOLO un JSON válido sin markdown ni texto adicional.`;
+Valores posibles:
+- aiScore: "Premium", "Estándar" o "Bajo"
+- aiNiche: "Médico-DICOM", "Automatización", "Digital" o "Multi-servicio"
+- aiSentiment: "Positivo", "Neutro" o "Negativo"
+- aiDicom: true o false`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash-lite",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              id: { type: Type.INTEGER },
-              aiScore: { type: Type.STRING },
-              aiSummary: { type: Type.STRING },
-              aiNiche: { type: Type.STRING },
-              aiSentiment: { type: Type.STRING },
-              aiDicom: { type: Type.BOOLEAN }
-            },
-            required: ["id", "aiScore", "aiSummary", "aiNiche", "aiSentiment", "aiDicom"]
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: "user",
+            content: prompt,
           }
-        }
-      }
+        ],
+        temperature: 0.3,
+        max_tokens: 4000,
+      }),
     });
 
-    const aiResults = JSON.parse(response.text || "[]");
+    if (!response.ok) {
+      const err = await response.json();
+      console.error("Groq error:", err);
+      return leads;
+    }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content || "[]";
+
+    // Limpiar posibles markdown fences
+    const clean = text.replace(/```json|```/g, "").trim();
+    const aiResults = JSON.parse(clean);
 
     return leads.map((lead, index) => {
       const enrichment = aiResults.find((r: any) => r.id === index);
