@@ -16,8 +16,8 @@ export interface BusinessData {
   website?: string;
   email?: string;
   categoryName?: string;
-  stars?: number;
-  reviewsCount?: number;
+  stars?: number | string;
+  reviewsCount?: number | string;
   url?: string;
   // Campos de IA
   aiScore?: 'Premium' | 'Estándar' | 'Bajo';
@@ -25,6 +25,7 @@ export interface BusinessData {
   aiNiche?: string;
   aiSentiment?: string;
   aiDicom?: boolean;
+  aiServices?: string[];
 }
 
 export type AppView = 'login' | 'admin' | 'dashboard' | 'config';

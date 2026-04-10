@@ -779,15 +779,35 @@ const Dashboard: React.FC = () => {
                           </div>
                         )}
                       </div>
+                      {item.email && (
+                        <div className="flex items-center gap-2 bg-slate-50 p-3 rounded-2xl mt-2">
+                          <span className="text-xs">✉️</span>
+                          <a href={`mailto:${item.email}`} className="text-xs font-bold text-indigo-600 hover:underline truncate flex-1">{item.email}</a>
+                          <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.email || ''); }} className="p-1 text-slate-300 hover:text-indigo-500">
+                            <Copy className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
                       {item.aiSummary && (
-                        <div className="mt-6 bg-violet-50 p-5 rounded-3xl border border-violet-100">
+                        <div className="mt-4 bg-violet-50 p-4 rounded-3xl border border-violet-100">
                           <div className="flex items-center justify-between mb-2">
-                            <p className="text-[10px] font-black text-violet-600 uppercase">Análisis Gemini</p>
+                            <p className="text-[10px] font-black text-violet-600 uppercase">Análisis IA</p>
                             {item.aiNiche && (
                               <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-violet-200 text-violet-700">{item.aiNiche}</span>
                             )}
                           </div>
-                          <p className="text-xs text-violet-900 italic font-bold">"{item.aiSummary}"</p>
+                          <p className="text-xs text-violet-900 italic font-bold mb-3">"{item.aiSummary}"</p>
+                          {item.aiServices && item.aiServices.length > 0 && (
+                            <div className="space-y-1 border-t border-violet-100 pt-2">
+                              <p className="text-[10px] font-black text-violet-500 uppercase mb-1">Servicios a ofrecer:</p>
+                              {item.aiServices.map((s, i) => (
+                                <div key={i} className="flex items-start gap-2">
+                                  <span className="text-violet-400 text-xs mt-0.5">→</span>
+                                  <span className="text-[11px] text-violet-800 font-medium">{s}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
                       <div className="flex items-center justify-between pt-6 mt-6 border-t border-slate-50">
