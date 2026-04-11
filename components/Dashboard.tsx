@@ -411,7 +411,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     if (results.length === 0) return;
     const headers = ["Nombre", "Teléfono", "Web", "Dirección", "Categoría", "IA Score", "Análisis IA"];
     const rows = results.map(item => [
@@ -425,6 +425,26 @@ const Dashboard: React.FC = () => {
     link.href = URL.createObjectURL(blob);
     link.download = `leads_saasynetia_${new Date().getTime()}.csv`;
     link.click();
+
+    // Enviar leads al sistema de outreach automatico
+    try {
+      const leads = results.map(item => ({
+        name: item.name || '',
+        phone: item.phone || '',
+        website: item.website || '',
+        address: item.address || '',
+        categoryName: item.categoryName || '',
+        aiScore: item.aiScore || 0,
+        aiSummary: item.aiSummary || '',
+      }));
+      await fetch('https://synetia-synetia-n8n.8kpnr1.easypanel.host/webhook/ab35083e-edc1-4b7c-ac26-afb23c5facf0', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(leads),
+      });
+    } catch {
+      // No interrumpir el flujo si el webhook falla
+    }
   };
 
   return (
