@@ -657,16 +657,28 @@ const Dashboard: React.FC = () => {
                 <div className="flex flex-col items-center gap-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cantidad por página</label>
                   <div className="flex items-center bg-slate-100 rounded-2xl p-1 gap-1">
-                    {[10, 20].map(val => (
+                    {[5, 10, 20, 30, 50].map(val => (
                       <button
                         key={val}
                         type="button"
                         onClick={() => setMaxLeads(val)}
-                        className={`px-5 py-2 rounded-xl text-xs font-black transition-all ${maxLeads === val ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white'}`}
+                        className={`px-3 py-2 rounded-xl text-xs font-black transition-all ${maxLeads === val ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white'}`}
                       >
                         {val}
                       </button>
                     ))}
+                    <input
+                      type="number"
+                      min={5}
+                      max={50}
+                      value={maxLeads}
+                      onChange={e => {
+                        const v = Math.min(50, Math.max(5, parseInt(e.target.value) || 5));
+                        setMaxLeads(v);
+                      }}
+                      className="w-14 px-2 py-2 rounded-xl text-xs font-black text-center bg-white border border-slate-200 text-slate-700 focus:outline-none focus:border-indigo-400"
+                      title="Escribe un número entre 5 y 50"
+                    />
                   </div>
                 </div>
 
