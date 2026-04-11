@@ -33,79 +33,78 @@ const analyzeWithGroq = async (lead: BusinessData, webData: WebData): Promise<Pa
   const reviewsNum = parseInt(String(lead.reviewsCount || "0").replace(/\D/g, "")) || 0;
   const starsNum = parseFloat(String(lead.stars || "0")) || 0;
   const hasWeb = !!lead.website;
+  const businessType = `${lead.name} ${lead.categoryName}`.toLowerCase();
 
-  // Determinar tamaño real basado en reseñas
-  let size = "consultorio pequeño";
-  if (reviewsNum > 300) size = "clínica grande consolidada";
-  else if (reviewsNum > 100) size = "clínica mediana activa";
-  else if (reviewsNum > 30) size = "consultorio mediano";
-  else if (reviewsNum > 0) size = "consultorio pequeño o nuevo";
-  else size = "sin reseñas visibles";
+  // Tamaño genérico basado en reseñas
+  let size = "negocio sin reseñas visibles";
+  if (reviewsNum > 500) size = "negocio muy consolidado";
+  else if (reviewsNum > 100) size = "negocio grande";
+  else if (reviewsNum > 30) size = "negocio mediano";
+  else if (reviewsNum > 0) size = "negocio pequeño o nuevo";
 
-  // Determinar reputación
+  // Reputación
   let reputation = "";
   if (starsNum >= 4.8) reputation = "reputación excelente";
   else if (starsNum >= 4.5) reputation = "buena reputación";
   else if (starsNum >= 4.0) reputation = "reputación aceptable";
   else if (starsNum > 0) reputation = "reputación mejorable";
 
-  // Determinar si es candidato DICOM
-  const isDicomCandidate = /(dental|dent|odont|radiolog|clínica|clinic|hospital|veterina|ortoped|neurol|oncolog|médic|medic|imagen|rayos|tomograf)/i.test(
-    `${lead.name} ${lead.categoryName}`
-  );
+  // Candidato DICOM solo para negocios de salud/imagen médica
+  const isDicomCandidate = /(dental|dent|odont|radiolog|hospital|veterina|ortoped|neurol|oncolog|médic|medic|imagen|rayos|tomograf|ecograf)/i.test(businessType);
 
-  // Construir contexto web detallado
-  let webContext = "Sin sitio web — oportunidad de presencia digital desde cero.";
+  // Contexto web
+  let webContext = "Sin sitio web.";
   if (hasWeb) {
-    const parts = [];
+    const parts: string[] = [];
     if (webData.webStatus) parts.push(`Web ${webData.webStatus}`);
     if (webData.hasWhatsApp) parts.push("tiene WhatsApp integrado");
     else parts.push("sin WhatsApp visible");
-    if (webData.hasBooking) parts.push("tiene sistema de citas online");
-    else parts.push("sin sistema de citas");
+    if (webData.hasBooking) parts.push("tiene reservas/citas online");
+    else parts.push("sin sistema de reservas online");
     if (webData.hasSocialMedia) parts.push("vinculada a redes sociales");
     if (webData.email) parts.push(`email público: ${webData.email}`);
     webContext = parts.join(", ") + ".";
     if (webData.textPreview) {
-      webContext += ` Contenido detectado: "${webData.textPreview.slice(0, 200)}"`;
+      webContext += ` Contenido: "${webData.textPreview.slice(0, 200)}"`;
     }
   }
 
-  const prompt = `Eres un ejecutivo de ventas B2B de SynetIA. Tu trabajo es analizar negocios reales y escribir fichas de prospección concretas y útiles para el equipo comercial.
+  const prompt = `Eres un ejecutivo de ventas B2B de SynetIA. Analizas negocios reales y escribes fichas de prospección concretas para el equipo comercial.
 
-SERVICIOS QUE OFRECE SYNETIA:
-- SynetIA DICOM Relay: plataforma para enviar estudios de imagenología (radiografías, tomografías, ecografías) del centro radiológico directamente al médico tratante, de forma segura y sin instalaciones. El médico recibe un email y descarga el estudio con un click. Sin almacenamiento permanente. Ideal para: clínicas dentales con rayos X, centros radiológicos, hospitales, veterinarias con diagnóstico por imagen.
-- Bot de WhatsApp: automatización de respuestas, agendamiento de citas, recordatorios y seguimiento de pacientes/clientes por WhatsApp.
-- Gestión Digital: agenda online, CRM de pacientes/clientes, dashboard de métricas, recordatorios automáticos.
+SERVICIOS DE SYNETIA (elige solo los relevantes para este tipo de negocio):
+- Bot de WhatsApp: atiende clientes 24/7, responde preguntas frecuentes, toma pedidos/reservas, envía recordatorios automáticos.
+- Gestión Digital: agenda online, CRM de clientes, dashboard de métricas, automatización de seguimiento.
+- SynetIA DICOM Relay: envío seguro de estudios de imagenología (solo para clínicas, hospitales, dentistas, veterinarias con diagnóstico por imagen).
 
 NEGOCIO A ANALIZAR:
 - Nombre: ${lead.name}
-- Tipo: ${lead.categoryName || "No especificado"}
+- Categoría: ${lead.categoryName || "No especificado"}
 - Ubicación: ${lead.address || "No disponible"}
 - Estrellas: ${starsNum > 0 ? `${starsNum}/5` : "Sin calificación"}
-- Reseñas en Google: ${reviewsNum > 0 ? reviewsNum : "Sin reseñas"}
-- Tamaño estimado: ${size}
+- Reseñas Google: ${reviewsNum > 0 ? reviewsNum : "Sin reseñas"}
+- Tamaño: ${size}
 - Reputación: ${reputation || "desconocida"}
-- Sitio web: ${hasWeb ? lead.website : "NO TIENE"}
+- Web: ${hasWeb ? lead.website : "NO TIENE"}
 - Estado web: ${webContext}
 
-INSTRUCCIONES ESTRICTAS:
-1. El aiSummary debe ser una ficha comercial real de 25-35 palabras. Debe mencionar: el tipo exacto de negocio, su tamaño real, su ubicación específica, y LA BRECHA más importante que SynetIA puede resolver. Sé directo y concreto. PROHIBIDO usar frases genéricas como "alto potencial" o "oportunidad de mejora".
-   Ejemplos buenos:
-   - "Clínica dental con 121 reseñas en Mendoza sin sistema de citas online. Bot WhatsApp eliminaría llamadas manuales y DICOM agilizaría envío de radiografías."
-   - "Urgencias dentales en Maipú, 82 reseñas, web activa sin WhatsApp. Pacientes en emergencia necesitan respuesta inmediata — bot ideal."
-   - "Consultorio dental nuevo en Graneros, solo 2 reseñas, sin web. Necesita presencia digital completa antes que automatización."
+INSTRUCCIONES:
+1. aiSummary: 25-35 palabras. Menciona el TIPO EXACTO de negocio (no uses "clínica" si es restaurante, tienda, etc.), tamaño, ubicación real, y la brecha principal. Sé específico y directo.
+   Ejemplos para distintos rubros:
+   - Restaurante: "Restaurante italiano con 8863 reseñas en Mendoza sin sistema de reservas online. Bot WhatsApp automatizaría consultas de mesas y menú del día."
+   - Tienda: "Tienda de ropa en Santiago con 45 reseñas, web activa sin WhatsApp. Bot respondería consultas de stock y tallas las 24 horas."
+   - Dentista: "Clínica dental con 121 reseñas en Bogotá sin citas online. Bot WhatsApp eliminaría llamadas manuales y DICOM agilizaría envío de radiografías."
+   - Hotel: "Hotel boutique en Buenos Aires con 320 reseñas sin sistema de reservas directo. Bot WhatsApp captaría reservas sin comisiones de intermediarios."
 
-2. aiScore: "Premium" si tiene +100 reseñas o es candidato DICOM con web activa. "Estándar" si tiene 20-100 reseñas. "Bajo" si tiene menos de 20 reseñas o sin web ni teléfono.
+2. aiScore: "Premium" si +100 reseñas o candidato DICOM con web. "Estándar" si 20-100 reseñas. "Bajo" si menos de 20 reseñas o sin web ni teléfono.
 
-3. aiNiche: Elige el servicio MÁS urgente según la brecha detectada: "DICOM" / "Bot WhatsApp" / "Gestión Digital" / "Multi-servicio"
+3. aiNiche: el servicio MÁS relevante para este negocio específico: "DICOM" / "Bot WhatsApp" / "Gestión Digital" / "Multi-servicio"
 
-4. aiServices: Máximo 3 servicios. Cada uno debe tener el formato "Nombre del servicio: razón específica basada en los datos de este negocio". NO repitas la misma justificación en distintos servicios.
+4. aiServices: máximo 3 servicios. Formato: "Nombre: razón específica para ESTE negocio". Solo incluye DICOM si es un negocio de salud con imagen médica.
 
-5. aiDicom: true si el negocio maneja diagnóstico por imagen (dental, radiología, veterinaria, hospital).
+5. aiDicom: true SOLO si el negocio maneja radiografías, ecografías, tomografías u otras imágenes médicas (dental, radiología, hospital, veterinaria diagnóstica).
 
-Responde ÚNICAMENTE con JSON válido, sin markdown ni texto extra:
-{"aiSummary":"...","aiScore":"...","aiNiche":"...","aiServices":["...","...","..."],"aiDicom":true}`;
+Responde ÚNICAMENTE con JSON válido, sin markdown:
+{"aiSummary":"...","aiScore":"...","aiNiche":"...","aiServices":["...","..."],"aiDicom":false}`;
 
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -115,19 +114,19 @@ Responde ÚNICAMENTE con JSON válido, sin markdown ni texto extra:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "llama-3.1-8b-instant",
+        model: "llama-3.3-70b-versatile",
         messages: [
           {
             role: "system",
-            content: "Eres un ejecutivo de ventas B2B experto. Escribes fichas de prospección precisas, concretas y basadas en datos reales. Nunca usas frases genéricas. Siempre respondes en JSON válido."
+            content: "Eres un ejecutivo de ventas B2B experto. Analizas cualquier tipo de negocio con precisión. Nunca confundas el rubro de un negocio. Nunca uses terminología de salud para negocios que no son del sector salud. Siempre respondes en JSON válido sin markdown."
           },
           {
             role: "user",
             content: prompt
           }
         ],
-        temperature: 0.2,
-        max_tokens: 400,
+        temperature: 0.1,
+        max_tokens: 500,
       }),
     });
 
@@ -136,7 +135,6 @@ Responde ÚNICAMENTE con JSON válido, sin markdown ni texto extra:
     const clean = text.replace(/```json|```/g, "").trim();
     const parsed = JSON.parse(clean);
 
-    // Aseguramos que aiDicom sea correcto si el modelo falla
     if (isDicomCandidate && parsed.aiDicom === undefined) {
       parsed.aiDicom = true;
     }
