@@ -30,11 +30,20 @@ export default async function handler(req: any, res: any) {
       return json(res, 400, { error: "Faltan campos: to, subject, html" });
     }
 
+    // Versión texto plano para evitar spam
+    const text = html
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+      .replace(/<[^>]+>/g, "")
+      .replace(/\s{2,}/g, "\n")
+      .trim();
+
     const { data, error } = await resend.emails.send({
       from: "SynetIA <hola@synetia.site>",
+      reply_to: "agencia@synetia.cloud",
       to: [to],
       subject,
       html,
+      text,
     });
 
     if (error) return json(res, 500, { error: error.message });
