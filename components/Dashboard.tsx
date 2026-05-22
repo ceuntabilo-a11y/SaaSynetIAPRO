@@ -24,11 +24,13 @@ import {
   Trash2,
   Settings,
   Zap,
+  Mail,
 } from 'lucide-react';
 import { BusinessData, ScraperSettings } from '../types';
 import { getSerpApiAccountInfo } from '../lib/scraper';
 import { enrichLeadsWithAI } from '../lib/ai';
 import { searchWithSerp } from "../lib/scraper";
+import EmailModal from './EmailModal';
 
 const NICHES_DATA: Record<string, string[]> = {
   "Médico": ["Odontólogo", "Pediatra", "Cirujano", "Dermatólogo", "Clínica Dental", "Veterinaria", "Urólogo", "Ginecólogo"],
@@ -169,6 +171,7 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [selectedLeadIndex, setSelectedLeadIndex] = useState<number | null>(null);
+  const [emailModalLead, setEmailModalLead] = useState<BusinessData | null>(null);
 
   const specialties = useMemo(() => selectedNiche ? NICHES_DATA[selectedNiche] || [] : [], [selectedNiche]);
   const availableCities = useMemo(() => country ? COUNTRIES_CITIES[country] || [] : [], [country]);
@@ -846,7 +849,19 @@ const Dashboard: React.FC = () => {
                         {item.website ? (
                           <a href={item.website} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-indigo-600 text-[11px] font-black flex items-center gap-2 uppercase hover:underline"> <Globe className="w-4 h-4" /> Visitar Web </a>
                         ) : <span className="text-slate-300 text-[10px] font-black uppercase">Sin Sitio Web</span>}
-                        <a href={item.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="bg-slate-50 p-3 rounded-2xl text-slate-400 hover:text-indigo-600 transition-all hover:bg-indigo-50"> <ExternalLink className="w-5 h-5" /> </a>
+                        <div className="flex items-center gap-2">
+                          {item.email && (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setEmailModalLead(item); }}
+                              className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl text-[11px] font-black transition-all"
+                              title={`Enviar email a ${item.email}`}
+                            >
+                              <Mail className="w-3.5 h-3.5" /> Email
+                            </button>
+                          )}
+                          <a href={item.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="bg-slate-50 p-3 rounded-2xl text-slate-400 hover:text-indigo-600 transition-all hover:bg-indigo-50"> <ExternalLink className="w-5 h-5" /> </a>
+                        </div>
                       </div>
                     </div>
                   );
@@ -871,6 +886,13 @@ const Dashboard: React.FC = () => {
             </div>
           )}
         </>
+      )}
+    </div>
+      {emailModalLead && (
+        <EmailModal
+          lead={emailModalLead}
+          onClose={() => setEmailModalLead(null)}
+        />
       )}
     </div>
   );
