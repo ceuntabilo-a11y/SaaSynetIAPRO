@@ -887,7 +887,6 @@ const Dashboard: React.FC = () => {
           )}
         </>
       )}
-    </div>
       {emailModalLead && (
         <EmailModal
           lead={emailModalLead}
