@@ -7,126 +7,229 @@ interface EmailModalProps {
   onClose: () => void;
 }
 
-// ─── Genera el HTML del email (lo que Resend envía) ──────────────────────────
-function buildEmailHtml(subject: string, body: string): string {
-  // Convierte saltos de línea en párrafos HTML para el email
+const WA_NUMBER = "56995012907";
+const LINKEDIN_URL = "https://www.linkedin.com/in/orlando-mu%C3%B1oz-251a25284/";
+
+function buildEmailHtml(body: string, senderName: string, leadName: string): string {
   const paragraphs = body
     .split("\n")
     .filter((l) => l.trim() !== "")
-    .map((l) => `<p style="margin:0 0 16px;line-height:1.7;color:#1e293b;">${l}</p>`)
+    .map((l) => `<p style="margin:0 0 16px;line-height:1.7;color:#1E293B;">${l}</p>`)
     .join("");
 
-  return `<!DOCTYPE html>
-<html lang="es">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f8fafc;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:48px 16px;">
-    <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
+  return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><title>SynetIA</title></head>
+<body style="margin:0;padding:0;background-color:#ECEEF2;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ECEEF2">
+<tr><td align="center" style="padding:32px 0 48px;">
+<table width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;">
 
-        <!-- Header -->
-        <tr>
-          <td style="background:#0a0a0f;padding:32px 40px;text-align:left;">
-            <span style="font-size:22px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">
-              Synet<span style="color:#6366f1;">IA</span>
-            </span>
-            <p style="margin:6px 0 0;font-size:11px;color:#6b7280;letter-spacing:2px;text-transform:uppercase;">Estudio de Diseño Web · LATAM</p>
+  <!-- ACCENT TOP -->
+  <tr><td height="4" bgcolor="#1B4FD8" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+
+  <!-- HEADER -->
+  <tr>
+    <td bgcolor="#FFFFFF" style="padding:20px 32px;border-left:1px solid #E4E7EF;border-right:1px solid #E4E7EF;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td width="50%" valign="middle" style="font-family:Georgia,serif;font-size:20px;font-weight:bold;color:#1B4FD8;">Synet<span style="color:#16A34A;">IA</span></td>
+        <td width="50%" valign="middle" align="right" style="font-family:Arial,sans-serif;font-size:10px;color:#94A3B8;letter-spacing:2px;text-transform:uppercase;">SYNETIA.SITE</td>
+      </tr></table>
+    </td>
+  </tr>
+
+  <!-- HERO -->
+  <tr>
+    <td bgcolor="#1B4FD8" style="padding:44px 32px 40px;">
+      <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:22px;"><tr>
+        <td bgcolor="#2563EB" style="padding:7px 16px;border-radius:999px;">
+          <table cellpadding="0" cellspacing="0" border="0"><tr>
+            <td width="6" height="6" bgcolor="#4ADE80" style="border-radius:50%;font-size:0;">&nbsp;</td>
+            <td style="padding-left:8px;font-family:Arial,sans-serif;font-size:10px;color:#BFDBFE;letter-spacing:2px;text-transform:uppercase;">PROPUESTA DE SERVICIOS DIGITALES</td>
+          </tr></table>
+        </td>
+      </tr></table>
+      <p style="margin:0 0 14px;font-family:Georgia,serif;font-size:34px;font-weight:bold;font-style:italic;color:#FFFFFF;line-height:1.15;">Tecnolog&iacute;a que impulsa<br>tu negocio.</p>
+      <p style="margin:0;font-family:Arial,sans-serif;font-size:14px;color:#BFDBFE;line-height:1.75;">Presencia digital profesional, automatizaci&oacute;n con inteligencia artificial<br>y herramientas a medida &mdash; para cualquier negocio, en cualquier parte del mundo.</p>
+    </td>
+  </tr>
+
+  <!-- STATS BAR -->
+  <tr>
+    <td bgcolor="#1E3A8A" style="padding:0;border-left:1px solid #1B4FD8;border-right:1px solid #1B4FD8;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td width="148" align="center" style="padding:18px 8px;">
+          <p style="margin:0 0 4px;font-family:Georgia,serif;font-size:17px;font-style:italic;color:#FFFFFF;">Web</p>
+          <p style="margin:0;font-family:Arial,sans-serif;font-size:9px;color:#93C5FD;letter-spacing:1px;text-transform:uppercase;">Dise&ntilde;o &amp; Dev</p>
+        </td>
+        <td width="1" bgcolor="#3B5BA5" style="font-size:0;">&nbsp;</td>
+        <td width="148" align="center" style="padding:18px 8px;">
+          <p style="margin:0 0 4px;font-family:Georgia,serif;font-size:17px;font-style:italic;color:#FFFFFF;">IA</p>
+          <p style="margin:0;font-family:Arial,sans-serif;font-size:9px;color:#93C5FD;letter-spacing:1px;text-transform:uppercase;">Agentes 24/7</p>
+        </td>
+        <td width="1" bgcolor="#3B5BA5" style="font-size:0;">&nbsp;</td>
+        <td width="148" align="center" style="padding:18px 8px;">
+          <p style="margin:0 0 4px;font-family:Georgia,serif;font-size:17px;font-style:italic;color:#FFFFFF;">Global</p>
+          <p style="margin:0;font-family:Arial,sans-serif;font-size:9px;color:#93C5FD;letter-spacing:1px;text-transform:uppercase;">Alcance mundial</p>
+        </td>
+        <td width="1" bgcolor="#3B5BA5" style="font-size:0;">&nbsp;</td>
+        <td width="148" align="center" style="padding:18px 8px;">
+          <p style="margin:0 0 4px;font-family:Georgia,serif;font-size:17px;font-style:italic;color:#FFFFFF;">E-com</p>
+          <p style="margin:0;font-family:Arial,sans-serif;font-size:9px;color:#93C5FD;letter-spacing:1px;text-transform:uppercase;">Tiendas online</p>
+        </td>
+      </tr></table>
+    </td>
+  </tr>
+
+  <!-- SALUDO + CUERPO DINÁMICO -->
+  <tr>
+    <td bgcolor="#FFFFFF" style="padding:36px 32px 20px;border-left:1px solid #E4E7EF;border-right:1px solid #E4E7EF;">
+      <p style="margin:0 0 20px;font-family:Arial,sans-serif;font-size:15px;color:#1E293B;">Estimado/a <strong style="color:#1B4FD8;">${leadName}</strong>,</p>
+      ${paragraphs}
+    </td>
+  </tr>
+
+  <!-- SERVICIO 1 -->
+  <tr>
+    <td bgcolor="#FFFFFF" style="padding:0 32px 16px;border-left:1px solid #E4E7EF;border-right:1px solid #E4E7EF;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td width="3" bgcolor="#1B4FD8" style="font-size:0;">&nbsp;</td>
+        <td bgcolor="#F0F4FF" style="padding:22px 24px;">
+          <p style="margin:0 0 4px;font-family:Arial,sans-serif;font-size:9px;color:#1B4FD8;letter-spacing:2px;text-transform:uppercase;font-weight:bold;">Presencia Digital</p>
+          <p style="margin:0 0 10px;font-family:Georgia,serif;font-size:18px;font-style:italic;color:#1E293B;">P&aacute;ginas web, Landing Pages &amp; E-commerce</p>
+          <p style="margin:0;font-family:Arial,sans-serif;font-size:13px;color:#475569;line-height:1.78;">Dise&ntilde;o moderno, carga r&aacute;pida y posicionado en Google desde el primer d&iacute;a. Para tiendas, restaurantes, cl&iacute;nicas, startups &mdash; cualquier negocio que quiera <strong style="color:#1E293B;">captar m&aacute;s clientes y aumentar ventas</strong>.</p>
+        </td>
+      </tr></table>
+    </td>
+  </tr>
+
+  <!-- SERVICIO 2 -->
+  <tr>
+    <td bgcolor="#FFFFFF" style="padding:0 32px 32px;border-left:1px solid #E4E7EF;border-right:1px solid #E4E7EF;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td width="3" bgcolor="#16A34A" style="font-size:0;">&nbsp;</td>
+        <td bgcolor="#F0FDF4" style="padding:22px 24px;">
+          <p style="margin:0 0 4px;font-family:Arial,sans-serif;font-size:9px;color:#16A34A;letter-spacing:2px;text-transform:uppercase;font-weight:bold;">Automatizaci&oacute;n Inteligente</p>
+          <p style="margin:0 0 10px;font-family:Georgia,serif;font-size:18px;font-style:italic;color:#1E293B;">Agentes de IA &amp; Dashboards de Gesti&oacute;n</p>
+          <p style="margin:0;font-family:Arial,sans-serif;font-size:13px;color:#475569;line-height:1.78;">Agentes en WhatsApp que agendan citas, confirman asistencia y responden dudas las 24 horas &mdash; m&aacute;s dashboards conectados a su calendario. <strong style="color:#1E293B;">Sin intervenci&oacute;n manual.</strong></p>
+        </td>
+      </tr></table>
+    </td>
+  </tr>
+
+  <!-- VER EJEMPLOS -->
+  <tr>
+    <td bgcolor="#EEF2FF" style="padding:22px 32px;border-left:1px solid #E4E7EF;border-right:1px solid #E4E7EF;border-top:1px solid #C7D2FE;border-bottom:1px solid #C7D2FE;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td valign="middle" style="padding-right:20px;">
+          <p style="margin:0 0 4px;font-family:Arial,sans-serif;font-size:9px;color:#4F46E5;letter-spacing:2px;text-transform:uppercase;font-weight:bold;">Demos en vivo</p>
+          <p style="margin:0;font-family:Arial,sans-serif;font-size:13px;color:#475569;line-height:1.7;">Visita nuestra web para ver ejemplos reales: landing pages, corporativas y e-commerce.</p>
+        </td>
+        <td valign="middle" align="right" style="white-space:nowrap;">
+          <table cellpadding="0" cellspacing="0" border="0"><tr>
+            <td bgcolor="#4F46E5" style="border-radius:999px;padding:0;">
+              <a href="https://synetia-demos.vercel.app" target="_blank" style="display:inline-block;padding:11px 22px;font-family:Arial,sans-serif;font-size:12px;font-weight:bold;color:#FFFFFF;text-decoration:none;">Ver demos</a>
+            </td>
+          </tr></table>
+        </td>
+      </tr></table>
+    </td>
+  </tr>
+
+  <!-- CTA BUTTONS -->
+  <tr>
+    <td bgcolor="#FFFFFF" align="center" style="padding:30px 32px 36px;border-left:1px solid #E4E7EF;border-right:1px solid #E4E7EF;">
+      <table cellpadding="0" cellspacing="0" border="0"><tr>
+        <td bgcolor="#1E293B" style="border-radius:999px;">
+          <a href="https://www.synetia.site" target="_blank" style="display:inline-block;padding:13px 26px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#FFFFFF;text-decoration:none;">Visitar synetia.site</a>
+        </td>
+        <td width="12">&nbsp;</td>
+        <td style="border:2px solid #CBD5E1;border-radius:999px;">
+          <a href="https://wa.me/${WA_NUMBER}" target="_blank" style="display:inline-block;padding:11px 26px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#1E293B;text-decoration:none;">Contactar por WhatsApp</a>
+        </td>
+      </tr></table>
+    </td>
+  </tr>
+
+  <!-- DIVIDER -->
+  <tr>
+    <td bgcolor="#FFFFFF" style="padding:0 32px;border-left:1px solid #E4E7EF;border-right:1px solid #E4E7EF;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td height="1" bgcolor="#E4E7EF" style="font-size:0;">&nbsp;</td></tr></table>
+    </td>
+  </tr>
+
+  <!-- FIRMA -->
+  <tr>
+    <td bgcolor="#F8FAFC" style="padding:26px 32px;border-left:1px solid #E4E7EF;border-right:1px solid #E4E7EF;">
+      <table cellpadding="0" cellspacing="0" border="0"><tr><td valign="top">
+        <p style="margin:0 0 2px;font-family:Georgia,serif;font-size:15px;font-style:italic;color:#1E293B;">${senderName} &mdash; SynetIA</p>
+        <p style="margin:0 0 8px;font-family:Arial,sans-serif;font-size:9px;color:#94A3B8;letter-spacing:2px;text-transform:uppercase;">Soluciones Digitales &amp; IA</p>
+        <p style="margin:0 0 10px;font-family:Arial,sans-serif;font-size:12px;color:#64748B;line-height:1.9;">
+          <a href="mailto:agencia@synetia.cloud" style="color:#1B4FD8;text-decoration:none;">agencia@synetia.cloud</a>
+          &nbsp;&middot;&nbsp;
+          <a href="https://www.synetia.site" style="color:#64748B;text-decoration:none;">www.synetia.site</a>
+        </p>
+        <table cellpadding="0" cellspacing="0" border="0"><tr>
+          <td style="padding-right:8px;">
+            <a href="${LINKEDIN_URL}" target="_blank" style="display:inline-block;padding:5px 14px;border:1px solid #CBD5E1;border-radius:999px;font-family:Arial,sans-serif;font-size:11px;font-weight:bold;color:#475569;text-decoration:none;">LinkedIn</a>
           </td>
-        </tr>
-
-        <!-- Body -->
-        <tr>
-          <td style="padding:40px 40px 32px;">
-            ${paragraphs}
+          <td>
+            <a href="https://wa.me/${WA_NUMBER}" target="_blank" style="display:inline-block;padding:5px 14px;border:1px solid #CBD5E1;border-radius:999px;font-family:Arial,sans-serif;font-size:11px;font-weight:bold;color:#475569;text-decoration:none;">WhatsApp</a>
           </td>
-        </tr>
+        </tr></table>
+      </td></tr></table>
+    </td>
+  </tr>
 
-        <!-- CTA -->
-        <tr>
-          <td style="padding:0 40px 40px;">
-            <a href="https://synetia-demos.vercel.app" 
-               style="display:inline-block;background:#6366f1;color:#ffffff;font-weight:800;font-size:14px;padding:14px 28px;border-radius:10px;text-decoration:none;letter-spacing:-0.2px;">
-              Ver nuestro portafolio →
-            </a>
-          </td>
-        </tr>
+  <!-- FOOTER -->
+  <tr>
+    <td bgcolor="#F1F5F9" align="center" style="padding:18px 32px;border:1px solid #E4E7EF;border-top:none;">
+      <p style="margin:0 0 4px;font-family:Arial,sans-serif;font-size:10px;color:#94A3B8;letter-spacing:1px;text-transform:uppercase;">&copy; 2026 SynetIA &nbsp;&middot;&nbsp; synetia.site &nbsp;&middot;&nbsp; agencia@synetia.cloud</p>
+      <p style="margin:0;font-family:Arial,sans-serif;font-size:10px;"><a href="#" style="color:#CBD5E1;text-decoration:underline;">Cancelar suscripci&oacute;n</a></p>
+    </td>
+  </tr>
+  <tr><td height="32" bgcolor="#ECEEF2" style="font-size:0;">&nbsp;</td></tr>
 
-        <!-- Demos strip -->
-        <tr>
-          <td style="background:#f1f5f9;padding:24px 40px;border-top:1px solid #e2e8f0;">
-            <p style="margin:0 0 12px;font-size:10px;font-weight:800;color:#94a3b8;letter-spacing:2px;text-transform:uppercase;">Demos en vivo</p>
-            <table cellpadding="0" cellspacing="0">
-              <tr>
-                <td style="padding-right:16px;">
-                  <a href="https://synetia-demos.vercel.app/demo-landing/index.html" style="font-size:12px;color:#6366f1;font-weight:700;text-decoration:none;">Landing · Brillia Dental →</a>
-                </td>
-                <td style="padding-right:16px;">
-                  <a href="https://synetia-demos.vercel.app/demo-corporativa/index.html" style="font-size:12px;color:#6366f1;font-weight:700;text-decoration:none;">Corporativa · Mirum →</a>
-                </td>
-                <td>
-                  <a href="https://synetia-demos.vercel.app/demo-ecommerce/index.html" style="font-size:12px;color:#6366f1;font-weight:700;text-decoration:none;">E-commerce · GBless →</a>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-
-        <!-- Footer -->
-        <tr>
-          <td style="padding:20px 40px;border-top:1px solid #e2e8f0;text-align:left;">
-            <p style="margin:0;font-size:11px;color:#94a3b8;">© 2026 SynetIA · <a href="mailto:hola@synetia.site" style="color:#94a3b8;">hola@synetia.site</a></p>
-            <p style="margin:4px 0 0;font-size:10px;color:#cbd5e1;">Si no deseas recibir más correos, responde con "No gracias" y te eliminamos de inmediato.</p>
-          </td>
-        </tr>
-
-      </table>
-    </td></tr>
-  </table>
+</table>
+</td></tr>
+</table>
 </body>
 </html>`;
 }
 
-// ─── Genera el texto base del email según datos del lead ─────────────────────
 function buildDefaultBody(lead: BusinessData): string {
-  const name = lead.name || "equipo";
-  const category = lead.categoryName || "negocio";
   const summary = lead.aiSummary || "";
   const services = lead.aiServices?.slice(0, 2).join(" y ") || "";
+  const category = lead.categoryName || "negocio";
 
-  // Párrafo de contexto basado en análisis IA si existe
   const contextLine = summary
     ? `Analizando su presencia online noté que ${summary.toLowerCase()}.`
-    : `Revisando negocios del rubro ${category} en su zona, encontré ${name}.`;
+    : `Revisando negocios del rubro ${category} en su zona, encontré ${lead.name}.`;
 
   const servicesLine = services
     ? `En particular, creo que podrían beneficiarse de: ${services}.`
     : "";
 
-  return `Hola, mi nombre es Orlando y trabajo con SynetIA, un estudio de diseño web enfocado en negocios de LATAM.
+  return `Mi nombre es Orlando y trabajo con SynetIA, un estudio de diseño web y automatización con IA enfocado en negocios de LATAM.
 
 ${contextLine} ${servicesLine}
 
-Diseñamos landing pages, sitios corporativos y tiendas online que están hechos a mano — sin plantillas, sin shortcuts. El resultado es una web que refleja la calidad real de su negocio y convierte visitas en clientes.
+Diseñamos páginas web, landing pages y tiendas online hechas a mano — sin plantillas, sin shortcuts. También desarrollamos agentes de IA que atienden a sus clientes 24/7 sin intervención manual.
 
-Pueden ver tres demos en vivo en: synetia-demos.vercel.app
+Pueden ver demos en vivo en: synetia-demos.vercel.app
 
-Si les interesa conversar 30 minutos sin compromiso para ver si tiene sentido trabajar juntos, estaré encantado.
-
-Saludos,
-Orlando
-SynetIA · hola@synetia.site`;
+Si les interesa conversar 30 minutos sin compromiso, estaré encantado de coordinar.`;
 }
 
-// ─── Componente Modal ────────────────────────────────────────────────────────
 const EmailModal: React.FC<EmailModalProps> = ({ lead, onClose }) => {
-  const defaultSubject = `Propuesta web para ${lead.name}`;
-  const [subject, setSubject] = useState(defaultSubject);
+  const [toEmail, setToEmail] = useState(lead.email || "");
+  const [senderName, setSenderName] = useState("Orlando");
+  const [subject, setSubject] = useState(`Propuesta digital para ${lead.name}`);
   const [body, setBody] = useState(() => buildDefaultBody(lead));
   const [isSending, setIsSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cierra con Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handler);
@@ -134,29 +237,25 @@ const EmailModal: React.FC<EmailModalProps> = ({ lead, onClose }) => {
   }, [onClose]);
 
   const handleSend = async () => {
-    if (!lead.email) return;
+    if (!toEmail) return;
     setIsSending(true);
     setError(null);
-
     try {
       const res = await fetch("/api/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          to: lead.email,
+          to: toEmail,
           subject,
-          html: buildEmailHtml(subject, body),
+          html: buildEmailHtml(body, senderName, lead.name || "equipo"),
         }),
       });
-
       const data = await res.json();
-
       if (!res.ok || !data.ok) {
         setError(data.error || "Error al enviar.");
         setIsSending(false);
         return;
       }
-
       setSent(true);
     } catch {
       setError("Error de conexión. Intenta nuevamente.");
@@ -165,7 +264,6 @@ const EmailModal: React.FC<EmailModalProps> = ({ lead, onClose }) => {
   };
 
   return (
-    // Backdrop
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
@@ -177,9 +275,6 @@ const EmailModal: React.FC<EmailModalProps> = ({ lead, onClose }) => {
           <div>
             <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">Enviar Propuesta</p>
             <h2 className="text-lg font-black text-slate-800 leading-tight">{lead.name}</h2>
-            <p className="text-xs text-slate-400 font-medium mt-0.5 flex items-center gap-1">
-              <Mail className="w-3 h-3" /> {lead.email}
-            </p>
           </div>
           <button onClick={onClose} className="p-2 text-slate-300 hover:text-slate-600 transition">
             <X className="w-5 h-5" />
@@ -187,65 +282,85 @@ const EmailModal: React.FC<EmailModalProps> = ({ lead, onClose }) => {
         </div>
 
         {sent ? (
-          // ── Estado enviado ──
           <div className="flex-1 flex flex-col items-center justify-center gap-4 p-12 text-center">
             <div className="bg-emerald-50 p-5 rounded-full">
               <CheckCircle2 className="w-12 h-12 text-emerald-500" />
             </div>
             <h3 className="text-xl font-black text-slate-800">¡Email enviado!</h3>
             <p className="text-slate-500 text-sm max-w-xs">
-              El correo llegó a <strong>{lead.email}</strong> desde <strong>hola@synetia.site</strong>.
+              El correo llegó a <strong>{toEmail}</strong> desde <strong>hola@synetia.site</strong>.
             </p>
-            <button
-              onClick={onClose}
-              className="mt-4 px-8 py-3 bg-slate-900 text-white rounded-2xl font-black text-sm hover:bg-indigo-600 transition"
-            >
+            <button onClick={onClose} className="mt-4 px-8 py-3 bg-slate-900 text-white rounded-2xl font-black text-sm hover:bg-indigo-600 transition">
               Cerrar
             </button>
           </div>
         ) : (
-          // ── Formulario ──
           <>
-            <div className="flex-1 overflow-y-auto p-8 space-y-5">
+            <div className="flex-1 overflow-y-auto p-8 space-y-4">
+
+              {/* Para (editable) */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Para</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="email"
+                    value={toEmail}
+                    onChange={(e) => setToEmail(e.target.value)}
+                    placeholder="correo@empresa.com"
+                    className="w-full pl-10 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none text-sm font-semibold text-slate-800 focus:border-indigo-300 transition"
+                  />
+                </div>
+              </div>
+
+              {/* Tu nombre (editable) */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tu nombre en la firma</label>
+                <input
+                  type="text"
+                  value={senderName}
+                  onChange={(e) => setSenderName(e.target.value)}
+                  placeholder="Orlando"
+                  className="w-full p-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none text-sm font-semibold text-slate-800 focus:border-indigo-300 transition"
+                />
+              </div>
 
               {/* Asunto */}
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Asunto</label>
                 <input
                   type="text"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none text-sm font-semibold text-slate-800 focus:border-indigo-300 transition"
+                  className="w-full p-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none text-sm font-semibold text-slate-800 focus:border-indigo-300 transition"
                 />
               </div>
 
-              {/* Cuerpo */}
-              <div className="space-y-2">
+              {/* Mensaje */}
+              <div className="space-y-1">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mensaje</label>
                   <span className="text-[10px] text-indigo-400 font-bold flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" /> Prellenado con datos IA del lead
+                    <Sparkles className="w-3 h-3" /> Prellenado con IA del lead
                   </span>
                 </div>
                 <textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
-                  rows={14}
+                  rows={10}
                   className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none text-sm text-slate-700 font-medium resize-none focus:border-indigo-300 transition leading-relaxed"
                 />
-                <p className="text-[10px] text-slate-400">
-                  Este texto es el cuerpo del email. Edítalo antes de enviar. Los saltos de línea se respetan en el email.
-                </p>
+                <p className="text-[10px] text-slate-400">Los saltos de línea se respetan en el email final.</p>
               </div>
 
-              {/* Datos del análisis IA como referencia */}
+              {/* Contexto IA */}
               {lead.aiSummary && (
                 <div className="bg-violet-50 border border-violet-100 rounded-2xl p-4">
-                  <p className="text-[10px] font-black text-violet-500 uppercase tracking-widest mb-2">Contexto IA del lead</p>
+                  <p className="text-[10px] font-black text-violet-500 uppercase tracking-widest mb-2">Análisis IA del lead</p>
                   <p className="text-xs text-violet-800 italic">"{lead.aiSummary}"</p>
                   {lead.aiServices && lead.aiServices.length > 0 && (
                     <div className="mt-2 space-y-1">
-                      {lead.aiServices.map((s, i) => (
+                      {lead.aiServices.map((s: string, i: number) => (
                         <p key={i} className="text-[11px] text-violet-600 font-medium">→ {s}</p>
                       ))}
                     </div>
@@ -260,15 +375,15 @@ const EmailModal: React.FC<EmailModalProps> = ({ lead, onClose }) => {
               )}
             </div>
 
-            {/* Footer con botón enviar */}
+            {/* Footer con enviar */}
             <div className="px-8 py-5 border-t border-slate-100 flex items-center justify-between gap-4 bg-slate-50/50">
               <div className="text-[10px] text-slate-400 font-medium leading-relaxed">
                 <span className="font-black text-slate-600">Desde:</span> hola@synetia.site<br />
-                <span className="font-black text-slate-600">Para:</span> {lead.email}
+                <span className="font-black text-slate-600">Para:</span> {toEmail || "—"}
               </div>
               <button
                 onClick={handleSend}
-                disabled={isSending || !subject.trim() || !body.trim()}
+                disabled={isSending || !subject.trim() || !body.trim() || !toEmail.trim()}
                 className="flex items-center gap-2.5 bg-indigo-600 text-white px-8 py-3.5 rounded-2xl font-black text-sm hover:bg-indigo-700 disabled:opacity-50 transition-all active:scale-95 shadow-lg shadow-indigo-200"
               >
                 {isSending ? (
