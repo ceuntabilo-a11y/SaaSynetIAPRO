@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import { DICOM_ATTACHMENTS } from "./attachments";
+import { DICOM_ATTACHMENTS } from "./attachments.js";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
