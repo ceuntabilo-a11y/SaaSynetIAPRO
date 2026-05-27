@@ -202,9 +202,11 @@ function buildEmailHtml(body: string, senderName: string, leadName: string): str
 function buildDefaultBody(lead: BusinessData): string {
   const category = lead.categoryName || "su sector";
 
-  return `Qué gusto saludarlo. He estado siguiendo de cerca su perfil y su liderazgo en ${category}, y se me ocurrió una iniciativa que creo que podría interesarle.
+  return `Qué gusto saludarlo. Encontré su empresa mientras exploraba negocios destacados en ${category}, y se me ocurrió una iniciativa que creo que podría interesarle.
 
-Formo parte de un estudio de diseño web enfocado en soluciones de alto nivel y, como nos interesa mucho conectar con CEOs que lideran proyectos con gran potencial, tenemos un pequeño obsequio para usted: nos gustaría diseñarle una propuesta de página web DEMO completamente a medida para su empresa, de forma gratuita y sin ningún tipo de compromiso.
+Formo parte de SynetIA una empresa de creacion de activos digitales, web, automatizaciones y apps enfocada en soluciones de alto nivel y, como nos interesa mucho conectar con CEOs que lideran proyectos con gran potencial, tenemos un pequeño obsequio para usted: nos gustaría diseñarle una propuesta de página WEB DEMO completamente a medida para su empresa, de forma gratuita y sin ningún tipo de compromiso.
+
+Esta WEB DEMO estará activa durante 7 días para que usted pueda revisarla con total libertad junto a su equipo, socios, amigos, colegas, clientes o familiares — y así recibir opiniones reales antes de tomar cualquier decisión.
 
 No trabajamos con plantillas genéricas de plataformas como Wix o WordPress; todo nuestro desarrollo se realiza desde cero, adaptándonos por completo a los requerimientos y la identidad de quienes confían en nosotros.
 
@@ -217,6 +219,8 @@ Para poder armar esta propuesta visual y enviársela para que la revise con su e
 Con estos tres detalles tendremos todo lo necesario para ponernos manos a la obra.
 
 Mientras preparamos su propuesta, lo invito cordialmente a visitar nuestro sitio web (https://synetia-demos.vercel.app/), donde podrá explorar con más detalle otros servicios adicionales, activos y el tipo de estructuras que desarrollamos para potenciar la presencia digital de marcas competitivas.
+
+Adicionalmente, le enviamos adjunto información de interés sobre otros servicios y aplicaciones que ofrecemos, por si alguno se alinea con las necesidades actuales de su negocio.
 
 Quedo muy atento a sus comentarios para comenzar a trabajar en su diseño.
 
