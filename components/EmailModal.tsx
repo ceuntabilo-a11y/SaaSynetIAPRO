@@ -10,12 +10,26 @@ interface EmailModalProps {
 const WA_NUMBER = "56995012907";
 const LINKEDIN_URL = "https://www.linkedin.com/in/orlando-mu%C3%B1oz-251a25284/";
 
-function buildEmailHtml(body: string, senderName: string, leadName: string): string {
-  const paragraphs = body
+// Convierte URLs en <a> clickeables y da estilo a listas numeradas
+function textToHtmlParagraphs(text: string): string {
+  return text
     .split("\n")
     .filter((l) => l.trim() !== "")
-    .map((l) => `<p style="margin:0 0 16px;line-height:1.7;color:#1E293B;">${l}</p>`)
+    .map((l) => {
+      const withLinks = l.replace(
+        /(https?:\/\/[^\s)]+)/g,
+        '<a href="$1" target="_blank" style="color:#1B4FD8;text-decoration:underline;">$1</a>'
+      );
+      if (/^\d+\./.test(l.trim())) {
+        return `<p style="margin:0 0 10px;line-height:1.7;color:#1E293B;padding-left:12px;">${withLinks}</p>`;
+      }
+      return `<p style="margin:0 0 16px;line-height:1.7;color:#1E293B;">${withLinks}</p>`;
+    })
     .join("");
+}
+
+function buildEmailHtml(body: string, senderName: string, leadName: string): string {
+  const paragraphs = textToHtmlParagraphs(body);
 
   return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -25,10 +39,8 @@ function buildEmailHtml(body: string, senderName: string, leadName: string): str
 <tr><td align="center" style="padding:32px 0 48px;">
 <table width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;">
 
-  <!-- ACCENT TOP -->
   <tr><td height="4" bgcolor="#1B4FD8" style="font-size:0;line-height:0;">&nbsp;</td></tr>
 
-  <!-- HEADER -->
   <tr>
     <td bgcolor="#FFFFFF" style="padding:20px 32px;border-left:1px solid #E4E7EF;border-right:1px solid #E4E7EF;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
@@ -38,7 +50,6 @@ function buildEmailHtml(body: string, senderName: string, leadName: string): str
     </td>
   </tr>
 
-  <!-- HERO -->
   <tr>
     <td bgcolor="#1B4FD8" style="padding:44px 32px 40px;">
       <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:22px;"><tr>
@@ -54,7 +65,6 @@ function buildEmailHtml(body: string, senderName: string, leadName: string): str
     </td>
   </tr>
 
-  <!-- STATS BAR -->
   <tr>
     <td bgcolor="#1E3A8A" style="padding:0;border-left:1px solid #1B4FD8;border-right:1px solid #1B4FD8;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
@@ -81,7 +91,6 @@ function buildEmailHtml(body: string, senderName: string, leadName: string): str
     </td>
   </tr>
 
-  <!-- SALUDO + CUERPO DINÁMICO -->
   <tr>
     <td bgcolor="#FFFFFF" style="padding:36px 32px 20px;border-left:1px solid #E4E7EF;border-right:1px solid #E4E7EF;">
       <p style="margin:0 0 20px;font-family:Arial,sans-serif;font-size:15px;color:#1E293B;">Estimado/a <strong style="color:#1B4FD8;">${leadName}</strong>,</p>
@@ -89,7 +98,6 @@ function buildEmailHtml(body: string, senderName: string, leadName: string): str
     </td>
   </tr>
 
-  <!-- SERVICIO 1 -->
   <tr>
     <td bgcolor="#FFFFFF" style="padding:0 32px 16px;border-left:1px solid #E4E7EF;border-right:1px solid #E4E7EF;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
@@ -103,7 +111,6 @@ function buildEmailHtml(body: string, senderName: string, leadName: string): str
     </td>
   </tr>
 
-  <!-- SERVICIO 2 -->
   <tr>
     <td bgcolor="#FFFFFF" style="padding:0 32px 32px;border-left:1px solid #E4E7EF;border-right:1px solid #E4E7EF;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
@@ -117,7 +124,6 @@ function buildEmailHtml(body: string, senderName: string, leadName: string): str
     </td>
   </tr>
 
-  <!-- VER EJEMPLOS -->
   <tr>
     <td bgcolor="#EEF2FF" style="padding:22px 32px;border-left:1px solid #E4E7EF;border-right:1px solid #E4E7EF;border-top:1px solid #C7D2FE;border-bottom:1px solid #C7D2FE;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
@@ -128,7 +134,7 @@ function buildEmailHtml(body: string, senderName: string, leadName: string): str
         <td valign="middle" align="right" style="white-space:nowrap;">
           <table cellpadding="0" cellspacing="0" border="0"><tr>
             <td bgcolor="#4F46E5" style="border-radius:999px;padding:0;">
-              <a href="https://synetia-demos.vercel.app" target="_blank" style="display:inline-block;padding:11px 22px;font-family:Arial,sans-serif;font-size:12px;font-weight:bold;color:#FFFFFF;text-decoration:none;">Ver demos</a>
+              <a href="https://synetia-demos.vercel.app/" target="_blank" style="display:inline-block;padding:11px 22px;font-family:Arial,sans-serif;font-size:12px;font-weight:bold;color:#FFFFFF;text-decoration:none;">Ver demos</a>
             </td>
           </tr></table>
         </td>
@@ -136,7 +142,6 @@ function buildEmailHtml(body: string, senderName: string, leadName: string): str
     </td>
   </tr>
 
-  <!-- CTA BUTTONS -->
   <tr>
     <td bgcolor="#FFFFFF" align="center" style="padding:30px 32px 36px;border-left:1px solid #E4E7EF;border-right:1px solid #E4E7EF;">
       <table cellpadding="0" cellspacing="0" border="0"><tr>
@@ -151,14 +156,12 @@ function buildEmailHtml(body: string, senderName: string, leadName: string): str
     </td>
   </tr>
 
-  <!-- DIVIDER -->
   <tr>
     <td bgcolor="#FFFFFF" style="padding:0 32px;border-left:1px solid #E4E7EF;border-right:1px solid #E4E7EF;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td height="1" bgcolor="#E4E7EF" style="font-size:0;">&nbsp;</td></tr></table>
     </td>
   </tr>
 
-  <!-- FIRMA -->
   <tr>
     <td bgcolor="#F8FAFC" style="padding:26px 32px;border-left:1px solid #E4E7EF;border-right:1px solid #E4E7EF;">
       <table cellpadding="0" cellspacing="0" border="0"><tr><td valign="top">
@@ -181,7 +184,6 @@ function buildEmailHtml(body: string, senderName: string, leadName: string): str
     </td>
   </tr>
 
-  <!-- FOOTER -->
   <tr>
     <td bgcolor="#F1F5F9" align="center" style="padding:18px 32px;border:1px solid #E4E7EF;border-top:none;">
       <p style="margin:0 0 4px;font-family:Arial,sans-serif;font-size:10px;color:#94A3B8;letter-spacing:1px;text-transform:uppercase;">&copy; 2026 SynetIA &nbsp;&middot;&nbsp; synetia.site &nbsp;&middot;&nbsp; agencia@synetia.cloud</p>
@@ -198,33 +200,35 @@ function buildEmailHtml(body: string, senderName: string, leadName: string): str
 }
 
 function buildDefaultBody(lead: BusinessData): string {
-  const summary = lead.aiSummary || "";
-  const services = lead.aiServices?.slice(0, 2).join(" y ") || "";
-  const category = lead.categoryName || "negocio";
+  const category = lead.categoryName || "su sector";
 
-  const contextLine = summary
-    ? `Analizando su presencia online noté que ${summary.toLowerCase()}.`
-    : `Revisando negocios del rubro ${category} en su zona, encontré ${lead.name}.`;
+  return `Qué gusto saludarlo. He estado siguiendo de cerca su perfil y su liderazgo en ${category}, y se me ocurrió una iniciativa que creo que podría interesarle.
 
-  const servicesLine = services
-    ? `En particular, creo que podrían beneficiarse de: ${services}.`
-    : "";
+Formo parte de un estudio de diseño web enfocado en soluciones de alto nivel y, como nos interesa mucho conectar con CEOs que lideran proyectos con gran potencial, tenemos un pequeño obsequio para usted: nos gustaría diseñarle una propuesta de página web completamente a medida para su empresa, de forma gratuita y sin ningún tipo de compromiso.
 
-  return `Mi nombre es Orlando y trabajo con SynetIA, un estudio de diseño web y automatización con IA enfocado en negocios de LATAM.
+No trabajamos con plantillas genéricas de plataformas como Wix o WordPress; todo nuestro desarrollo se realiza desde cero, adaptándonos por completo a los requerimientos y la identidad de quienes confían en nosotros.
 
-${contextLine} ${servicesLine}
+Para poder armar esta propuesta visual y enviársela para que la revise con su equipo, solo necesitaría que me ayude respondiendo estas tres rápidas preguntas:
 
-Diseñamos páginas web, landing pages y tiendas online hechas a mano — sin plantillas, sin shortcuts. También desarrollamos agentes de IA que atienden a sus clientes 24/7 sin intervención manual.
+1. ¿A qué se dedica exactamente su negocio y cuál considera que es el principal punto de diferenciación de su empresa?
+2. ¿Tienen colores corporativos definidos o un logotipo? (Si cuenta con los códigos hexadecimales de los colores o el logo, sería excelente. Si no, ¿con qué palabra describiría el estilo que busca para su marca: lujosa, moderna, seria, elegante, etc.?)
+3. ¿Qué le gustaría que sienta un usuario al ingresar a su web por primera vez? (confianza, exclusividad, frescura, profesionalismo, seguridad, etc.)
 
-Pueden ver demos en vivo en: synetia-demos.vercel.app
+Con estos tres detalles tendremos todo lo necesario para ponernos manos a la obra.
 
-Si les interesa conversar 30 minutos sin compromiso, estaré encantado de coordinar.`;
+Mientras preparamos su propuesta, lo invito cordialmente a visitar nuestro sitio web (https://synetia-demos.vercel.app/), donde podrá explorar con más detalle otros servicios adicionales, activos y el tipo de estructuras que desarrollamos para potenciar la presencia digital de marcas competitivas.
+
+Quedo muy atento a sus comentarios para comenzar a trabajar en su diseño.
+
+Un saludo afectuoso,`;
 }
 
 const EmailModal: React.FC<EmailModalProps> = ({ lead, onClose }) => {
   const [toEmail, setToEmail] = useState(lead.email || "");
   const [senderName, setSenderName] = useState("Orlando");
-  const [subject, setSubject] = useState(`Propuesta digital para ${lead.name}`);
+  const [subject, setSubject] = useState(
+    `Una propuesta exclusiva para ${lead.name || "usted"} (un obsequio a medida)`
+  );
   const [body, setBody] = useState(() => buildDefaultBody(lead));
   const [isSending, setIsSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -270,11 +274,17 @@ const EmailModal: React.FC<EmailModalProps> = ({ lead, onClose }) => {
     >
       <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
 
-        {/* Header */}
         <div className="flex items-center justify-between px-8 py-6 border-b border-slate-100">
           <div>
             <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">Enviar Propuesta</p>
             <h2 className="text-lg font-black text-slate-800 leading-tight">{lead.name}</h2>
+            {lead.email ? (
+              <p className="text-xs text-slate-400 font-medium mt-0.5 flex items-center gap-1">
+                <Mail className="w-3 h-3" /> {lead.email}
+              </p>
+            ) : (
+              <p className="text-xs text-amber-500 font-bold mt-0.5">Sin email detectado — ingrésalo manualmente</p>
+            )}
           </div>
           <button onClick={onClose} className="p-2 text-slate-300 hover:text-slate-600 transition">
             <X className="w-5 h-5" />
@@ -288,7 +298,7 @@ const EmailModal: React.FC<EmailModalProps> = ({ lead, onClose }) => {
             </div>
             <h3 className="text-xl font-black text-slate-800">¡Email enviado!</h3>
             <p className="text-slate-500 text-sm max-w-xs">
-              El correo llegó a <strong>{toEmail}</strong> desde <strong>hola@synetia.site</strong>.
+              El correo llegó a <strong>{toEmail}</strong>.
             </p>
             <button onClick={onClose} className="mt-4 px-8 py-3 bg-slate-900 text-white rounded-2xl font-black text-sm hover:bg-indigo-600 transition">
               Cerrar
@@ -298,7 +308,6 @@ const EmailModal: React.FC<EmailModalProps> = ({ lead, onClose }) => {
           <>
             <div className="flex-1 overflow-y-auto p-8 space-y-4">
 
-              {/* Para (editable) */}
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Para</label>
                 <div className="relative">
@@ -308,12 +317,11 @@ const EmailModal: React.FC<EmailModalProps> = ({ lead, onClose }) => {
                     value={toEmail}
                     onChange={(e) => setToEmail(e.target.value)}
                     placeholder="correo@empresa.com"
-                    className="w-full pl-10 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none text-sm font-semibold text-slate-800 focus:border-indigo-300 transition"
+                    className={`w-full pl-10 pr-4 py-3.5 bg-slate-50 border-2 rounded-2xl outline-none text-sm font-semibold text-slate-800 focus:border-indigo-300 transition ${!toEmail ? "border-amber-200" : "border-slate-100"}`}
                   />
                 </div>
               </div>
 
-              {/* Tu nombre (editable) */}
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tu nombre en la firma</label>
                 <input
@@ -325,7 +333,6 @@ const EmailModal: React.FC<EmailModalProps> = ({ lead, onClose }) => {
                 />
               </div>
 
-              {/* Asunto */}
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Asunto</label>
                 <input
@@ -336,35 +343,26 @@ const EmailModal: React.FC<EmailModalProps> = ({ lead, onClose }) => {
                 />
               </div>
 
-              {/* Mensaje */}
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mensaje</label>
                   <span className="text-[10px] text-indigo-400 font-bold flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" /> Prellenado con IA del lead
+                    <Sparkles className="w-3 h-3" /> Prellenado con datos del lead
                   </span>
                 </div>
                 <textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
-                  rows={10}
+                  rows={12}
                   className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none text-sm text-slate-700 font-medium resize-none focus:border-indigo-300 transition leading-relaxed"
                 />
-                <p className="text-[10px] text-slate-400">Los saltos de línea se respetan en el email final.</p>
+                <p className="text-[10px] text-slate-400">Los saltos de línea y URLs se convierten automáticamente en el email.</p>
               </div>
 
-              {/* Contexto IA */}
               {lead.aiSummary && (
                 <div className="bg-violet-50 border border-violet-100 rounded-2xl p-4">
                   <p className="text-[10px] font-black text-violet-500 uppercase tracking-widest mb-2">Análisis IA del lead</p>
                   <p className="text-xs text-violet-800 italic">"{lead.aiSummary}"</p>
-                  {lead.aiServices && lead.aiServices.length > 0 && (
-                    <div className="mt-2 space-y-1">
-                      {lead.aiServices.map((s: string, i: number) => (
-                        <p key={i} className="text-[11px] text-violet-600 font-medium">→ {s}</p>
-                      ))}
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -375,11 +373,10 @@ const EmailModal: React.FC<EmailModalProps> = ({ lead, onClose }) => {
               )}
             </div>
 
-            {/* Footer con enviar */}
             <div className="px-8 py-5 border-t border-slate-100 flex items-center justify-between gap-4 bg-slate-50/50">
               <div className="text-[10px] text-slate-400 font-medium leading-relaxed">
                 <span className="font-black text-slate-600">Desde:</span> hola@synetia.site<br />
-                <span className="font-black text-slate-600">Para:</span> {toEmail || "—"}
+                <span className="font-black text-slate-600">Para:</span> {toEmail || <span className="text-amber-500">sin correo aún</span>}
               </div>
               <button
                 onClick={handleSend}
