@@ -204,7 +204,7 @@ function buildDefaultBody(lead: BusinessData): string {
 
   return `Qué gusto saludarlo. He estado siguiendo de cerca su perfil y su liderazgo en ${category}, y se me ocurrió una iniciativa que creo que podría interesarle.
 
-Formo parte de un estudio de diseño web enfocado en soluciones de alto nivel y, como nos interesa mucho conectar con CEOs que lideran proyectos con gran potencial, tenemos un pequeño obsequio para usted: nos gustaría diseñarle una propuesta de página web completamente a medida para su empresa, de forma gratuita y sin ningún tipo de compromiso.
+Formo parte de un estudio de diseño web enfocado en soluciones de alto nivel y, como nos interesa mucho conectar con CEOs que lideran proyectos con gran potencial, tenemos un pequeño obsequio para usted: nos gustaría diseñarle una propuesta de página web DEMO completamente a medida para su empresa, de forma gratuita y sin ningún tipo de compromiso.
 
 No trabajamos con plantillas genéricas de plataformas como Wix o WordPress; todo nuestro desarrollo se realiza desde cero, adaptándonos por completo a los requerimientos y la identidad de quienes confían en nosotros.
 
