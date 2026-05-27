@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { DICOM_ATTACHMENTS } from "./attachments";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -24,27 +25,33 @@ export default async function handler(req: any, res: any) {
   if (req.method !== "POST") return json(res, 405, { error: "Method not allowed" });
 
   try {
-    const { to, subject, html } = await readBody(req) as any;
+    const { to, subject, html, includeDicom } = await readBody(req) as any;
 
     if (!to || !subject || !html) {
       return json(res, 400, { error: "Faltan campos: to, subject, html" });
     }
 
-    // Versión texto plano para evitar spam
     const text = html
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
       .replace(/<[^>]+>/g, "")
       .replace(/\s{2,}/g, "\n")
       .trim();
 
-    const { data, error } = await resend.emails.send({
+    const emailPayload: any = {
       from: "SynetIA <hola@synetia.site>",
       reply_to: "agencia@synetia.cloud",
       to: [to],
       subject,
       html,
       text,
-    });
+    };
+
+    // Adjuntar PDFs solo si es lead DICOM
+    if (includeDicom) {
+      emailPayload.attachments = DICOM_ATTACHMENTS;
+    }
+
+    const { data, error } = await resend.emails.send(emailPayload);
 
     if (error) return json(res, 500, { error: error.message });
 

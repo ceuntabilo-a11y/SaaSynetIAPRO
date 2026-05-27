@@ -233,6 +233,7 @@ const EmailModal: React.FC<EmailModalProps> = ({ lead, onClose }) => {
   const [isSending, setIsSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [includeDicom, setIncludeDicom] = useState(!!lead.aiDicom);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -252,6 +253,7 @@ const EmailModal: React.FC<EmailModalProps> = ({ lead, onClose }) => {
           to: toEmail,
           subject,
           html: buildEmailHtml(body, senderName, lead.name || "equipo"),
+          includeDicom,
         }),
       });
       const data = await res.json();
@@ -358,6 +360,26 @@ const EmailModal: React.FC<EmailModalProps> = ({ lead, onClose }) => {
                 />
                 <p className="text-[10px] text-slate-400">Los saltos de línea y URLs se convierten automáticamente en el email.</p>
               </div>
+
+              {/* DICOM checkbox — solo visible si el lead es candidato */}
+              {lead.aiDicom && (
+                <div
+                  onClick={() => setIncludeDicom(!includeDicom)}
+                  className={`flex items-center gap-3 p-4 rounded-2xl border-2 cursor-pointer transition-all ${includeDicom ? "bg-blue-50 border-blue-300" : "bg-slate-50 border-slate-100"}`}
+                >
+                  <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${includeDicom ? "bg-blue-600 border-blue-600" : "border-slate-300"}`}>
+                    {includeDicom && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                  </div>
+                  <div>
+                    <p className={`text-sm font-black ${includeDicom ? "text-blue-700" : "text-slate-600"}`}>
+                      📎 Adjuntar Brochure + Manual DICOM
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Este lead es candidato DICOM — se adjuntarán 2 PDFs de SynetIA DICOM Relay
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {lead.aiSummary && (
                 <div className="bg-violet-50 border border-violet-100 rounded-2xl p-4">
