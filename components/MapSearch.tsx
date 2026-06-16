@@ -1,25 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  MapPin,
-  Search,
-  Loader2,
-  Phone,
-  Globe,
-  ExternalLink,
-  AlertTriangle,
-  CheckCircle2,
-  Star,
-  X,
-  Copy,
-  Check,
-  Download,
-  Trash2,
-  PlusCircle,
-  Target,
-  Navigation,
-  SlidersHorizontal,
+  MapPin, Search, Loader2, Phone, Globe, ExternalLink,
+  AlertTriangle, CheckCircle2, Star, X, Copy, Check,
+  Download, Trash2, PlusCircle, Target, Navigation,
+  SlidersHorizontal, BrainCircuit, Mail, Sparkles,
 } from 'lucide-react';
 import { BusinessData, ScraperSettings } from '../types';
+import { enrichLeadsWithAI } from '../lib/ai';
+import EmailModal from './EmailModal';
 
 interface MapSearchResult extends BusinessData {
   _id: string;
@@ -31,36 +19,31 @@ const uniqueId = () => Math.random().toString(36).slice(2, 9);
 
 const buildGMapsLink = (name?: string, address?: string) => {
   const q = `${name || ''} ${address || ''}`.trim();
-  return q
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`
-    : 'https://www.google.com/maps';
+  return q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : 'https://www.google.com/maps';
 };
 
-// Icono personalizado indigo para marcadores de resultado
-const createResultIcon = (L: any, index: number) => {
-  return L.divIcon({
+const createResultIcon = (L: any, index: number, isActive: boolean) =>
+  L.divIcon({
     className: '',
-    html: `
-      <div style="
-        background: #4f46e5;
-        color: white;
-        width: 28px;
-        height: 28px;
-        border-radius: 50% 50% 50% 0;
-        transform: rotate(-45deg);
-        border: 2px solid white;
-        box-shadow: 0 2px 8px rgba(79,70,229,0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      ">
-        <span style="transform: rotate(45deg); font-size: 10px; font-weight: 900;">${index + 1}</span>
-      </div>
-    `,
-    iconSize: [28, 28],
-    iconAnchor: [14, 28],
-    popupAnchor: [0, -30],
+    html: `<div style="
+      background:${isActive ? '#7c3aed' : '#4f46e5'};
+      color:white;width:30px;height:30px;
+      border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+      border:2px solid white;
+      box-shadow:0 2px 10px rgba(79,70,229,${isActive ? '0.8' : '0.45'});
+      display:flex;align-items:center;justify-content:center;
+      transition:all .2s;
+    "><span style="transform:rotate(45deg);font-size:10px;font-weight:900;">${index + 1}</span></div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+    popupAnchor: [0, -32],
   });
+
+// Obtiene el color del score de IA
+const scoreColor = (score?: string) => {
+  if (score === 'Premium') return '#7c3aed';
+  if (score === 'Estándar') return '#0891b2';
+  return '#64748b';
 };
 
 const MapSearch: React.FC = () => {
@@ -71,7 +54,6 @@ const MapSearch: React.FC = () => {
   const resultMarkersRef = useRef<any[]>([]);
   const mapElRef = useRef<HTMLDivElement>(null);
   const leafletCssRef = useRef<HTMLLinkElement | null>(null);
-  const activeCardRef = useRef<HTMLDivElement | null>(null);
 
   const [mapReady, setMapReady] = useState(false);
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
@@ -80,6 +62,7 @@ const MapSearch: React.FC = () => {
   const [maxLeads, setMaxLeads] = useState<number>(20);
 
   const [isScraping, setIsScraping] = useState(false);
+  const [isEnriching, setIsEnriching] = useState(false);
   const [scrapeStatus, setScrapeStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<MapSearchResult[]>([]);
@@ -88,8 +71,9 @@ const MapSearch: React.FC = () => {
   const [currentOffset, setCurrentOffset] = useState(0);
   const [lastCenter, setLastCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [lastKeyword, setLastKeyword] = useState('');
+  const [emailModalLead, setEmailModalLead] = useState<BusinessData | null>(null);
 
-  // ── Cargar Leaflet ────────────────────────────────────────────────────────
+  // ── Cargar Leaflet ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!leafletCssRef.current) {
       const link = document.createElement('link');
@@ -98,177 +82,130 @@ const MapSearch: React.FC = () => {
       document.head.appendChild(link);
       leafletCssRef.current = link;
     }
-
-    if ((window as any).L) {
-      leafletRef.current = (window as any).L;
-      initMap();
-      return;
-    }
-
+    if ((window as any).L) { leafletRef.current = (window as any).L; initMap(); return; }
     const script = document.createElement('script');
     script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
     script.async = true;
-    script.onload = () => {
-      leafletRef.current = (window as any).L;
-      initMap();
-    };
+    script.onload = () => { leafletRef.current = (window as any).L; initMap(); };
     document.body.appendChild(script);
-
-    return () => {
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
-    };
+    return () => { if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; } };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const initMap = useCallback(() => {
     if (!mapElRef.current || mapRef.current) return;
     const L = leafletRef.current;
-
-    const map = L.map(mapElRef.current, {
-      center: [-33.4489, -70.6693],
-      zoom: 13,
-      zoomControl: true,
-    });
-
+    const map = L.map(mapElRef.current, { center: [-33.4489, -70.6693], zoom: 13 });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
-      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors', maxZoom: 19,
     }).addTo(map);
-
     mapRef.current = map;
     setMapReady(true);
-
-    map.on('click', (e: any) => {
-      const { lat, lng } = e.latlng;
-      setCenter({ lat, lng });
-    });
+    map.on('click', (e: any) => { const { lat, lng } = e.latlng; setCenter({ lat, lng }); });
   }, []);
 
-  // ── Círculo + marcador de centro ──────────────────────────────────────────
+  // ── Círculo de área ─────────────────────────────────────────────────────
   useEffect(() => {
     if (!mapRef.current || !leafletRef.current || !center) return;
     const L = leafletRef.current;
     const map = mapRef.current;
-
     if (circleRef.current) circleRef.current.remove();
     if (centerMarkerRef.current) centerMarkerRef.current.remove();
-
     circleRef.current = L.circle([center.lat, center.lng], {
-      radius: radiusKm * 1000,
-      color: '#4f46e5',
-      fillColor: '#4f46e5',
-      fillOpacity: 0.08,
-      weight: 2,
-      dashArray: '6 4',
+      radius: radiusKm * 1000, color: '#4f46e5', fillColor: '#4f46e5',
+      fillOpacity: 0.08, weight: 2, dashArray: '6 4',
     }).addTo(map);
-
-    const crossIcon = L.divIcon({
+    const icon = L.divIcon({
       className: '',
-      html: `<div style="
-        width:16px; height:16px;
-        background:#4f46e5;
-        border-radius:50%;
-        border:3px solid white;
-        box-shadow:0 0 0 2px #4f46e5;
-      "></div>`,
-      iconSize: [16, 16],
-      iconAnchor: [8, 8],
+      html: `<div style="width:14px;height:14px;background:#4f46e5;border-radius:50%;border:3px solid white;box-shadow:0 0 0 2px #4f46e5;"></div>`,
+      iconSize: [14, 14], iconAnchor: [7, 7],
     });
-
-    centerMarkerRef.current = L.marker([center.lat, center.lng], { icon: crossIcon })
-      .addTo(map)
-      .bindTooltip('Centro de búsqueda', { permanent: false, direction: 'top' });
-
+    centerMarkerRef.current = L.marker([center.lat, center.lng], { icon })
+      .addTo(map).bindTooltip('Centro de búsqueda', { direction: 'top' });
     map.setView([center.lat, center.lng], map.getZoom());
   }, [center, radiusKm]);
 
-  // ── Renderizar marcadores de resultados en el mapa ────────────────────────
-  useEffect(() => {
+  // ── Marcadores de resultados ────────────────────────────────────────────
+  const renderMarkers = useCallback((items: MapSearchResult[], currentActiveId: string | null) => {
     if (!mapRef.current || !leafletRef.current) return;
     const L = leafletRef.current;
     const map = mapRef.current;
-
-    // Limpiar marcadores anteriores
     resultMarkersRef.current.forEach((m) => m.remove());
     resultMarkersRef.current = [];
-
-    if (results.length === 0) return;
-
+    if (items.length === 0) return;
     const bounds: [number, number][] = [];
-
-    results.forEach((item, idx) => {
-      // Usar coordenadas si las hay, si no estimar desde el centro + offset
+    items.forEach((item, idx) => {
       let lat = item.lat;
       let lng = item.lng;
-
       if (!lat || !lng) {
-        // Sin coordenadas exactas: dispersar aleatoriamente dentro del radio visual
-        // para que el marcador sea visible (no se apilan todos en el centro)
-        const angle = (idx / results.length) * 2 * Math.PI;
-        const spread = (radiusKm * 0.6) / 111.32;
-        lat = (lastCenter?.lat ?? center?.lat ?? -33.4489) + spread * Math.sin(angle);
-        lng = (lastCenter?.lng ?? center?.lng ?? -70.6693) + spread * Math.cos(angle) / Math.cos(((lastCenter?.lat ?? -33.4489) * Math.PI) / 180);
+        const angle = (idx / items.length) * 2 * Math.PI;
+        const spread = (radiusKm * 0.55) / 111.32;
+        const baseLat = lastCenter?.lat ?? center?.lat ?? -33.4489;
+        const baseLng = lastCenter?.lng ?? center?.lng ?? -70.6693;
+        lat = baseLat + spread * Math.sin(angle);
+        lng = baseLng + spread * Math.cos(angle) / Math.cos((baseLat * Math.PI) / 180);
       }
-
       bounds.push([lat, lng]);
+      const isActive = item._id === currentActiveId;
+      const icon = createResultIcon(L, idx, isActive);
+
+      const scoreHtml = item.aiScore
+        ? `<span style="background:${scoreColor(item.aiScore)};color:white;font-size:9px;font-weight:900;padding:2px 7px;border-radius:20px;text-transform:uppercase;">${item.aiScore}</span>`
+        : '';
+      const emailHtml = item.email
+        ? `<div style="font-size:11px;color:#4f46e5;font-weight:700;margin-bottom:4px;">✉️ ${item.email}</div>`
+        : '';
+      const summaryHtml = item.aiSummary
+        ? `<div style="font-size:11px;color:#475569;background:#f8fafc;padding:6px 8px;border-radius:6px;margin:6px 0;line-height:1.4;">${item.aiSummary}</div>`
+        : '';
 
       const popupContent = `
-        <div style="min-width:220px; font-family:system-ui,sans-serif;">
+        <div style="min-width:230px;font-family:system-ui,sans-serif;">
           <div style="background:#4f46e5;color:white;padding:8px 12px;margin:-13px -20px 10px;border-radius:4px 4px 0 0;">
-            <span style="font-size:10px;font-weight:900;opacity:0.8;text-transform:uppercase;letter-spacing:1px;">#${idx + 1}</span>
-            <div style="font-weight:900;font-size:14px;margin-top:2px;line-height:1.2;">${item.name}</div>
+            <div style="display:flex;align-items:center;gap:6px;justify-content:space-between;">
+              <span style="font-size:10px;font-weight:900;opacity:0.7;">#${idx + 1}</span>
+              ${scoreHtml}
+            </div>
+            <div style="font-weight:900;font-size:14px;margin-top:4px;line-height:1.2;">${item.name}</div>
           </div>
-          ${item.categoryName ? `<div style="font-size:10px;font-weight:700;color:#6366f1;background:#eef2ff;display:inline-block;padding:2px 8px;border-radius:20px;margin-bottom:8px;text-transform:uppercase;">${item.categoryName}</div>` : ''}
-          ${item.stars ? `<div style="font-size:11px;color:#b45309;font-weight:700;margin-bottom:6px;">⭐ ${item.stars}${item.reviewsCount ? ` (${item.reviewsCount} reseñas)` : ''}</div>` : ''}
-          ${item.address ? `<div style="font-size:11px;color:#64748b;margin-bottom:6px;display:flex;gap:4px;"><span>📍</span><span>${item.address}</span></div>` : ''}
-          ${item.phone && item.phone !== 'No disponible' ? `<div style="font-size:12px;font-weight:800;color:#1e293b;margin-bottom:8px;">📞 ${item.phone}</div>` : ''}
-          <div style="display:flex;gap:6px;margin-top:10px;border-top:1px solid #f1f5f9;padding-top:8px;">
+          ${item.categoryName ? `<div style="font-size:10px;font-weight:700;color:#6366f1;background:#eef2ff;display:inline-block;padding:2px 8px;border-radius:20px;margin-bottom:6px;text-transform:uppercase;">${item.categoryName}</div>` : ''}
+          ${item.stars ? `<div style="font-size:11px;color:#b45309;font-weight:700;margin-bottom:5px;">⭐ ${item.stars}${item.reviewsCount ? ` (${item.reviewsCount})` : ''}</div>` : ''}
+          ${summaryHtml}
+          ${item.address ? `<div style="font-size:11px;color:#64748b;margin-bottom:5px;">📍 ${item.address}</div>` : ''}
+          ${item.phone && item.phone !== 'No disponible' ? `<div style="font-size:12px;font-weight:800;color:#1e293b;margin-bottom:5px;">📞 ${item.phone}</div>` : ''}
+          ${emailHtml}
+          <div style="display:flex;gap:6px;margin-top:8px;border-top:1px solid #f1f5f9;padding-top:8px;">
             ${item.website ? `<a href="${item.website}" target="_blank" style="flex:1;text-align:center;background:#eef2ff;color:#4f46e5;padding:5px 8px;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none;">🌐 Web</a>` : ''}
             <a href="${item.url}" target="_blank" style="flex:1;text-align:center;background:#f8fafc;color:#475569;padding:5px 8px;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none;">📍 Maps</a>
           </div>
-        </div>
-      `;
+        </div>`;
 
-      const icon = createResultIcon(L, idx);
       const marker = L.marker([lat, lng], { icon })
         .addTo(map)
-        .bindPopup(popupContent, { maxWidth: 260 });
+        .bindPopup(popupContent, { maxWidth: 270 });
 
-      // Al abrir popup → resaltar card
       marker.on('popupopen', () => {
         setActiveId(item._id);
-        // scroll suave a la card
         setTimeout(() => {
           const card = document.getElementById(`card-${item._id}`);
           if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
       });
-
-      marker.on('popupclose', () => {
-        setActiveId(null);
-      });
-
+      marker.on('popupclose', () => setActiveId(null));
       resultMarkersRef.current.push(marker);
     });
 
-    // Ajustar vista para mostrar todos los marcadores
     if (bounds.length > 0) {
-      try {
-        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
-      } catch (_) {}
+      try { map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 }); } catch (_) {}
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [results]);
+  }, [radiusKm, center, lastCenter]);
 
-  // ── Geolocalización ───────────────────────────────────────────────────────
+  useEffect(() => { renderMarkers(results, activeId); }, [results]);
+
+  // ── Geolocalización ─────────────────────────────────────────────────────
   const geolocate = () => {
-    if (!navigator.geolocation) {
-      setError('Tu navegador no soporta geolocalización.');
-      return;
-    }
+    if (!navigator.geolocation) { setError('Tu navegador no soporta geolocalización.'); return; }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
@@ -279,7 +216,7 @@ const MapSearch: React.FC = () => {
     );
   };
 
-  // ── Hacer clic en card → abrir popup del marcador ─────────────────────────
+  // ── Click en card → focus en mapa ───────────────────────────────────────
   const focusMarker = (id: string) => {
     const idx = results.findIndex((r) => r._id === id);
     if (idx === -1) return;
@@ -291,24 +228,25 @@ const MapSearch: React.FC = () => {
     setActiveId(id);
   };
 
-  // ── Búsqueda ──────────────────────────────────────────────────────────────
+  // ── Enriquecer con IA ───────────────────────────────────────────────────
+  const handleAIEnrichment = async () => {
+    setIsEnriching(true);
+    setScrapeStatus('IA analizando prospectos del mapa…');
+    try {
+      const enriched = await enrichLeadsWithAI(results as BusinessData[]);
+      const withIds = enriched.map((e, i) => ({ ...e, _id: results[i]?._id || uniqueId() })) as MapSearchResult[];
+      setResults(withIds);
+    } catch (err) { console.error(err); }
+    finally { setIsEnriching(false); setScrapeStatus(''); }
+  };
+
+  // ── Búsqueda ────────────────────────────────────────────────────────────
   const handleSearch = async (isLoadMore = false) => {
     const searchCenter = isLoadMore ? lastCenter : center;
-
-    if (!searchCenter) {
-      setError('Haz clic en el mapa para elegir el área de búsqueda.');
-      return;
-    }
-    if (!keyword.trim()) {
-      setError('Escribe qué quieres buscar (ej: iglesia adventista, mall chino…).');
-      return;
-    }
-
+    if (!searchCenter) { setError('Haz clic en el mapa para elegir el área de búsqueda.'); return; }
+    if (!keyword.trim()) { setError('Escribe qué quieres buscar.'); return; }
     const savedSettings = localStorage.getItem('scraper_settings');
-    if (!savedSettings) {
-      setError("Configura tu SerpApi Key en la pestaña 'Motor API' primero.");
-      return;
-    }
+    if (!savedSettings) { setError("Configura tu SerpApi Key en la pestaña 'Motor API' primero."); return; }
     const { apiKey }: ScraperSettings = JSON.parse(savedSettings);
 
     setError(null);
@@ -316,11 +254,8 @@ const MapSearch: React.FC = () => {
     setScrapeStatus(isLoadMore ? 'Cargando más resultados…' : 'Consultando Google Maps por área…');
 
     if (!isLoadMore) {
-      setResults([]);
-      setActiveId(null);
-      setCurrentOffset(0);
-      setLastCenter(searchCenter);
-      setLastKeyword(keyword.trim());
+      setResults([]); setActiveId(null); setCurrentOffset(0);
+      setLastCenter(searchCenter); setLastKeyword(keyword.trim());
     }
 
     const offsetToUse = isLoadMore ? currentOffset + maxLeads : 0;
@@ -335,22 +270,10 @@ const MapSearch: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ apiKey, q: usedKeyword, ll, num: maxLeads, start: offsetToUse }),
       });
-
-      if (!res.ok) {
-        const txt = await res.text().catch(() => '');
-        throw new Error(`Error /api/serp (${res.status}): ${txt || 'Sin detalle'}`);
-      }
-
+      if (!res.ok) throw new Error(`Error /api/serp (${res.status})`);
       const data = await res.json();
       const local: any[] = Array.isArray(data?.local_results) ? data.local_results : [];
-
-      if (local.length === 0) {
-        throw new Error(
-          isLoadMore
-            ? 'No hay más resultados para esta área.'
-            : 'Sin resultados en esta área. Prueba ampliar el radio o cambia la búsqueda.'
-        );
-      }
+      if (local.length === 0) throw new Error(isLoadMore ? 'No hay más resultados.' : 'Sin resultados en esta área. Prueba ampliar el radio o cambia la búsqueda.');
 
       const normalized: MapSearchResult[] = local.map((r: any) => ({
         _id: uniqueId(),
@@ -363,7 +286,6 @@ const MapSearch: React.FC = () => {
         stars: r?.rating ?? r?.stars ?? undefined,
         reviewsCount: r?.reviews ?? r?.reviews_count ?? undefined,
         url: r?.place_link || r?.links?.place_link || buildGMapsLink(r?.title || r?.name, r?.address || r?.full_address),
-        // SerpApi a veces devuelve gps_coordinates
         lat: r?.gps_coordinates?.latitude ?? r?.latitude ?? undefined,
         lng: r?.gps_coordinates?.longitude ?? r?.longitude ?? undefined,
       }));
@@ -389,21 +311,20 @@ const MapSearch: React.FC = () => {
   };
 
   const clearAll = () => {
-    if (results.length === 0) return;
+    if (!results.length) return;
     if (window.confirm('¿Confirmas limpiar todos los resultados?')) {
       resultMarkersRef.current.forEach((m) => m.remove());
       resultMarkersRef.current = [];
-      setResults([]);
-      setActiveId(null);
+      setResults([]); setActiveId(null);
     }
   };
 
   const exportCSV = () => {
-    if (results.length === 0) return;
-    const headers = ['Nombre', 'Teléfono', 'Web', 'Dirección', 'Categoría'];
+    if (!results.length) return;
+    const headers = ['Nombre', 'Teléfono', 'Email', 'Web', 'Dirección', 'Categoría', 'Score IA', 'Resumen IA'];
     const rows = results.map((r) => [
-      `"${r.name}"`, `"${r.phone || ''}"`, `"${r.website || ''}"`,
-      `"${r.address || ''}"`, `"${r.categoryName || ''}"`,
+      `"${r.name}"`, `"${r.phone || ''}"`, `"${r.email || ''}"`, `"${r.website || ''}"`,
+      `"${r.address || ''}"`, `"${r.categoryName || ''}"`, `"${r.aiScore || ''}"`, `"${(r.aiSummary || '').replace(/"/g, "'")}"`
     ]);
     const csv = '\uFEFF' + [headers, ...rows].map((r) => r.join(';')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -419,7 +340,9 @@ const MapSearch: React.FC = () => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  const hasEnriched = results.some((r) => r.aiScore || r.email);
+
+  // ── Render ──────────────────────────────────────────────────────────────
   return (
     <div className="space-y-8 animate-fadeIn">
 
@@ -432,23 +355,19 @@ const MapSearch: React.FC = () => {
           Búsqueda por <span className="text-indigo-600">Área en Mapa</span>
         </h2>
         <p className="text-slate-500 font-medium text-sm">
-          Haz clic en el mapa para marcar el área, ajusta el radio y escribe qué deseas encontrar.
-          Los resultados aparecen como marcadores — tócalos para ver la info.
+          Selecciona un área, define el radio, busca lo que quieras. Enriquece con IA y envía correos desde aquí.
         </p>
       </div>
 
       {/* Controles + Mapa */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* Controles */}
         <div className="lg:col-span-1 flex flex-col gap-5">
 
           <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 space-y-4">
             <p className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
               <Search className="w-3.5 h-3.5" /> ¿Qué deseas buscar?
             </p>
-            <input
-              type="text"
+            <input type="text"
               className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-semibold text-slate-700 focus:border-indigo-200 focus:bg-white transition"
               placeholder="Ej: iglesia adventista, mall chino, clínica dental…"
               value={keyword}
@@ -462,14 +381,10 @@ const MapSearch: React.FC = () => {
               <SlidersHorizontal className="w-3.5 h-3.5" /> Radio de búsqueda
             </p>
             <div className="flex items-center gap-3">
-              <input
-                type="range" min={0.1} max={20} step={0.1} value={radiusKm}
+              <input type="range" min={0.1} max={20} step={0.1} value={radiusKm}
                 onChange={(e) => setRadiusKm(parseFloat(e.target.value))}
-                className="flex-1 accent-indigo-600"
-              />
-              <span className="text-indigo-600 font-black text-sm w-16 text-right">
-                {radiusKm.toFixed(1)} km
-              </span>
+                className="flex-1 accent-indigo-600" />
+              <span className="text-indigo-600 font-black text-sm w-16 text-right">{radiusKm.toFixed(1)} km</span>
             </div>
             <div className="flex flex-wrap gap-2">
               {[0.5, 1, 2, 5, 10].map((v) => (
@@ -508,7 +423,7 @@ const MapSearch: React.FC = () => {
           </button>
 
           <button type="button" onClick={() => handleSearch(false)}
-            disabled={isScraping || !center || !keyword.trim()}
+            disabled={isScraping || isEnriching || !center || !keyword.trim()}
             className="w-full flex items-center justify-center gap-2 bg-slate-900 text-white py-5 rounded-2xl font-black text-base hover:bg-indigo-600 shadow-xl disabled:opacity-50 transition-all active:scale-95">
             {isScraping ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
             {isScraping ? scrapeStatus || 'Buscando…' : 'Buscar en esta área'}
@@ -555,12 +470,26 @@ const MapSearch: React.FC = () => {
       {/* Resultados */}
       {results.length > 0 && (
         <div className="space-y-6 animate-slideUp">
+
+          {/* Barra de acciones */}
           <div className="flex flex-col md:flex-row justify-between items-end gap-4">
             <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
               <CheckCircle2 className="w-6 h-6 text-emerald-500" />
               Resultados en área ({results.length})
+              {hasEnriched && <span className="text-xs font-black text-violet-600 bg-violet-50 px-3 py-1 rounded-xl">Enriquecidos con IA</span>}
             </h3>
             <div className="flex flex-wrap gap-3">
+              {/* Enriquecer con IA */}
+              <button
+                onClick={handleAIEnrichment}
+                disabled={isEnriching || isScraping}
+                className="flex items-center gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white px-5 py-3 rounded-2xl font-black text-sm disabled:opacity-50 transition hover:shadow-lg active:scale-95"
+              >
+                {isEnriching
+                  ? <><Loader2 className="w-4 h-4 animate-spin" /> {scrapeStatus || 'Analizando…'}</>
+                  : <><BrainCircuit className="w-4 h-4" /> Enriquecer con IA</>
+                }
+              </button>
               <button onClick={exportCSV}
                 className="flex items-center gap-2 bg-emerald-500 text-white px-5 py-3 rounded-2xl font-black text-sm hover:shadow-lg transition">
                 <Download className="w-4 h-4" /> Exportar
@@ -572,6 +501,7 @@ const MapSearch: React.FC = () => {
             </div>
           </div>
 
+          {/* Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {results.map((item, idx) => (
               <div
@@ -589,16 +519,24 @@ const MapSearch: React.FC = () => {
                   {idx + 1}
                 </div>
 
-                {/* Botón eliminar */}
-                <button
-                  type="button"
+                {/* Eliminar */}
+                <button type="button"
                   onClick={(e) => { e.stopPropagation(); deleteResult(item._id); }}
-                  className="absolute top-4 right-4 p-2 bg-rose-50 text-rose-500 hover:text-rose-700 rounded-xl opacity-0 group-hover:opacity-100 transition border border-rose-100"
-                >
+                  className="absolute top-4 right-4 p-2 bg-rose-50 text-rose-500 hover:text-rose-700 rounded-xl opacity-0 group-hover:opacity-100 transition border border-rose-100">
                   <X className="w-4 h-4" />
                 </button>
 
-                {/* Contenido */}
+                {/* Score IA badge */}
+                {item.aiScore && (
+                  <div className="absolute top-4 right-12 opacity-0 group-hover:opacity-100 transition">
+                    <span style={{ background: scoreColor(item.aiScore) }}
+                      className="text-white text-[9px] font-black px-2 py-1 rounded-xl uppercase tracking-wide">
+                      {item.aiScore}
+                    </span>
+                  </div>
+                )}
+
+                {/* Nombre + categoría */}
                 <div className="mb-4 mt-4">
                   {item.categoryName && (
                     <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl uppercase tracking-widest">
@@ -615,6 +553,17 @@ const MapSearch: React.FC = () => {
                   )}
                 </div>
 
+                {/* Resumen IA */}
+                {item.aiSummary && (
+                  <div className="mb-3 p-3 bg-violet-50 border border-violet-100 rounded-2xl">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Sparkles className="w-3 h-3 text-violet-500" />
+                      <span className="text-[9px] font-black text-violet-500 uppercase tracking-widest">Análisis IA</span>
+                    </div>
+                    <p className="text-xs text-violet-800 font-medium leading-relaxed">{item.aiSummary}</p>
+                  </div>
+                )}
+
                 <div className="space-y-3 text-sm flex-grow">
                   {(item.address || item.fullAddress) && (
                     <div className="flex items-start gap-2 text-slate-500">
@@ -622,6 +571,8 @@ const MapSearch: React.FC = () => {
                       <span className="text-xs font-medium">{item.address || item.fullAddress}</span>
                     </div>
                   )}
+
+                  {/* Teléfono */}
                   {item.phone && item.phone !== 'No disponible' && (
                     <div className="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-transparent hover:border-indigo-100 hover:bg-white transition-all">
                       <div className="flex items-center gap-2">
@@ -637,18 +588,45 @@ const MapSearch: React.FC = () => {
                       </button>
                     </div>
                   )}
+
+                  {/* Email */}
+                  {item.email && (
+                    <div className="flex items-center gap-2 bg-indigo-50 p-3 rounded-2xl">
+                      <Mail className="w-4 h-4 text-indigo-500 shrink-0" />
+                      <a href={`mailto:${item.email}`} onClick={(e) => e.stopPropagation()}
+                        className="text-xs font-bold text-indigo-600 hover:underline truncate flex-1">
+                        {item.email}
+                      </a>
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex items-center justify-between pt-5 mt-5 border-t border-slate-50">
+                {/* Footer */}
+                <div className="flex items-center justify-between pt-5 mt-5 border-t border-slate-50 gap-2">
                   {item.website ? (
                     <a href={item.website} target="_blank" rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
                       className="text-indigo-600 text-[11px] font-black flex items-center gap-1.5 uppercase hover:underline">
-                      <Globe className="w-4 h-4" /> Visitar Web
+                      <Globe className="w-4 h-4" /> Web
                     </a>
                   ) : (
-                    <span className="text-slate-300 text-[10px] font-black uppercase">Sin Sitio Web</span>
+                    <span className="text-slate-300 text-[10px] font-black uppercase">Sin Web</span>
                   )}
+
+                  {/* Botón enviar correo */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setEmailModalLead(item as BusinessData); }}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black transition-all ${
+                      item.email
+                        ? 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+                        : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
+                    }`}
+                    title={item.email ? `Enviar email a ${item.email}` : 'Sin email — puedes ingresar uno manualmente'}
+                  >
+                    <Mail className="w-3.5 h-3.5" />
+                    {item.email ? 'Enviar correo' : 'Correo manual'}
+                  </button>
+
                   <a href={item.url} target="_blank" rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
                     className="bg-slate-50 p-2.5 rounded-2xl text-slate-400 hover:text-indigo-600 transition-all hover:bg-indigo-50">
@@ -656,7 +634,6 @@ const MapSearch: React.FC = () => {
                   </a>
                 </div>
 
-                {/* Hint de interacción */}
                 <p className="text-center text-[10px] text-indigo-400 font-bold mt-3 opacity-0 group-hover:opacity-100 transition">
                   Clic para ver en el mapa →
                 </p>
@@ -666,7 +643,7 @@ const MapSearch: React.FC = () => {
 
           {/* Cargar más */}
           <div className="flex justify-center pt-8 pb-16">
-            <button onClick={() => handleSearch(true)} disabled={isScraping}
+            <button onClick={() => handleSearch(true)} disabled={isScraping || isEnriching}
               className="group flex flex-col items-center gap-4 transition-all hover:scale-105 active:scale-95 disabled:opacity-50">
               <div className="bg-slate-900 text-white w-16 h-16 rounded-full flex items-center justify-center shadow-2xl shadow-indigo-200 group-hover:bg-indigo-600 transition-colors">
                 {isScraping ? <Loader2 className="w-6 h-6 animate-spin" /> : <PlusCircle className="w-8 h-8" />}
@@ -678,6 +655,11 @@ const MapSearch: React.FC = () => {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Modal de email */}
+      {emailModalLead && (
+        <EmailModal lead={emailModalLead} onClose={() => setEmailModalLead(null)} />
       )}
     </div>
   );
