@@ -25,12 +25,14 @@ import {
   Settings,
   Zap,
   Mail,
+  Map,
 } from 'lucide-react';
 import { BusinessData, ScraperSettings } from '../types';
 import { getSerpApiAccountInfo } from '../lib/scraper';
 import { enrichLeadsWithAI } from '../lib/ai';
 import { searchWithSerp } from "../lib/scraper";
 import EmailModal from './EmailModal';
+import MapSearch from './MapSearch';
 
 const NICHES_DATA: Record<string, string[]> = {
   "Médico": ["Odontólogo", "Pediatra", "Cirujano", "Dermatólogo", "Clínica Dental", "Veterinaria", "Urólogo", "Ginecólogo"],
@@ -137,7 +139,7 @@ const CITY_LL: Record<string, string> = {
 };
 
 const Dashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"scraper" | "motor">("scraper");
+  const [activeTab, setActiveTab] = useState<"scraper" | "motor" | "map">("scraper");
 
   const [selectedNiche, setSelectedNiche] = useState<string>('');
   const [selectedSpecialty, setSelectedSpecialty] = useState<string>('');
@@ -474,6 +476,16 @@ const Dashboard: React.FC = () => {
           }`}
         >
           <Settings className="w-4 h-4" /> Motor API
+        </button>
+        <button
+          onClick={() => setActiveTab("map")}
+          className={`px-6 py-4 font-bold text-sm flex items-center gap-2 transition ${
+            activeTab === "map"
+              ? "border-b-2 border-indigo-600 text-indigo-600"
+              : "text-slate-400 hover:text-slate-600"
+          }`}
+        >
+          <Map className="w-4 h-4" /> Búsqueda por Mapa
         </button>
       </div>
 
@@ -885,6 +897,11 @@ const Dashboard: React.FC = () => {
           )}
         </>
       )}
+      {/* PESTAÑA MAPA */}
+      {activeTab === "map" && (
+        <MapSearch />
+      )}
+
       {emailModalLead && (
         <EmailModal
           lead={emailModalLead}
