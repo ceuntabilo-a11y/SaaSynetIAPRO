@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import {
   MapPin, Search, Loader2, Phone, Globe, ExternalLink,
   AlertTriangle, CheckCircle2, Star, X, Copy, Check,
@@ -48,12 +50,10 @@ const scoreColor = (score?: string) => {
 
 const MapSearch: React.FC = () => {
   const mapRef = useRef<any>(null);
-  const leafletRef = useRef<any>(null);
   const circleRef = useRef<any>(null);
   const centerMarkerRef = useRef<any>(null);
   const resultMarkersRef = useRef<any[]>([]);
   const mapElRef = useRef<HTMLDivElement>(null);
-  const leafletCssRef = useRef<HTMLLinkElement | null>(null);
 
   const [mapReady, setMapReady] = useState(false);
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
@@ -73,36 +73,37 @@ const MapSearch: React.FC = () => {
   const [lastKeyword, setLastKeyword] = useState('');
   const [emailModalLead, setEmailModalLead] = useState<BusinessData | null>(null);
 
-  // ── Cargar Leaflet ──────────────────────────────────────────────────────
+  // ── Inicializar mapa ────────────────────────────────────────────────────
   useEffect(() => {
-    if (!leafletCssRef.current) {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      document.head.appendChild(link);
-      leafletCssRef.current = link;
-    }
-    if ((window as any).L) { leafletRef.current = (window as any).L; initMap(); return; }
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    script.async = true;
-    script.onload = () => { leafletRef.current = (window as any).L; initMap(); };
-    document.body.appendChild(script);
-    return () => { if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; } };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const initMap = useCallback(() => {
     if (!mapElRef.current || mapRef.current) return;
-    const L = leafletRef.current;
+
     const map = L.map(mapElRef.current, { center: [-33.4489, -70.6693], zoom: 13 });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors', maxZoom: 19,
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
     }).addTo(map);
+    map.on('click', (e: L.LeafletMouseEvent) => {
+      setCenter({ lat: e.latlng.lat, lng: e.latlng.lng });
+    });
     mapRef.current = map;
     setMapReady(true);
-    map.on('click', (e: any) => { const { lat, lng } = e.latlng; setCenter({ lat, lng }); });
+
+    // Forzar recálculo cuando el contenedor cambia de tamaño (ej: cambio de pestaña)
+    const observer = new ResizeObserver(() => { map.invalidateSize(); });
+    if (mapElRef.current) observer.observe(mapElRef.current);
+
+    setTimeout(() => map.invalidateSize(), 100);
+    setTimeout(() => map.invalidateSize(), 500);
+    setTimeout(() => map.invalidateSize(), 1500);
+
+    return () => {
+      observer.disconnect();
+      map.remove();
+      mapRef.current = null;
+    };
   }, []);
+
+  const initMap = useCallback(() => {}, []);
 
   // ── Círculo de área ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -439,7 +440,7 @@ const MapSearch: React.FC = () => {
                 <span className="font-bold text-sm">Cargando mapa…</span>
               </div>
             )}
-            <div ref={mapElRef} style={{ height: '100%', width: '100%', display: mapReady ? 'block' : 'none' }} />
+            <div ref={mapElRef} style={{ height: '100%', width: '100%', visibility: mapReady ? 'visible' : 'hidden' }} />
           </div>
           {!center && mapReady && (
             <p className="text-center text-xs text-slate-400 font-bold mt-3 flex items-center justify-center gap-1">
