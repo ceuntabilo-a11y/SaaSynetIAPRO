@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 import {
   MapPin, Search, Loader2, Phone, Globe, ExternalLink,
   AlertTriangle, CheckCircle2, Star, X, Copy, Check,
@@ -73,42 +71,61 @@ const MapSearch: React.FC = () => {
   const [lastKeyword, setLastKeyword] = useState('');
   const [emailModalLead, setEmailModalLead] = useState<BusinessData | null>(null);
 
-  // ── Inicializar mapa ────────────────────────────────────────────────────
+  // ── Inicializar mapa via CDN ─────────────────────────────────────────────
   useEffect(() => {
-    if (!mapElRef.current || mapRef.current) return;
+    const loadMap = () => {
+      if (!mapElRef.current || mapRef.current) return;
+      const L = (window as any).L;
+      if (!L) return;
 
-    const map = L.map(mapElRef.current, { center: [-33.4489, -70.6693], zoom: 13 });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      maxZoom: 19,
-    }).addTo(map);
-    map.on('click', (e: L.LeafletMouseEvent) => {
-      setCenter({ lat: e.latlng.lat, lng: e.latlng.lng });
-    });
-    mapRef.current = map;
-    setMapReady(true);
+      // Inyectar CSS si no está
+      if (!document.getElementById('leaflet-css')) {
+        const link = document.createElement('link');
+        link.id = 'leaflet-css';
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(link);
+      }
 
-    // Forzar recálculo cuando el contenedor cambia de tamaño (ej: cambio de pestaña)
-    const observer = new ResizeObserver(() => { map.invalidateSize(); });
-    if (mapElRef.current) observer.observe(mapElRef.current);
+      const map = L.map(mapElRef.current, { center: [-33.4489, -70.6693], zoom: 13 });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19,
+      }).addTo(map);
+      map.on('click', (e: any) => {
+        setCenter({ lat: e.latlng.lat, lng: e.latlng.lng });
+      });
+      mapRef.current = map;
+      setMapReady(true);
 
-    setTimeout(() => map.invalidateSize(), 100);
-    setTimeout(() => map.invalidateSize(), 500);
-    setTimeout(() => map.invalidateSize(), 1500);
+      // ResizeObserver: recalcula tiles al cambiar de pestaña o redimensionar
+      const observer = new ResizeObserver(() => { map.invalidateSize(); });
+      if (mapElRef.current) observer.observe(mapElRef.current);
 
-    return () => {
-      observer.disconnect();
-      map.remove();
-      mapRef.current = null;
+      setTimeout(() => map.invalidateSize(), 100);
+      setTimeout(() => map.invalidateSize(), 600);
+      setTimeout(() => map.invalidateSize(), 1500);
+
+      return () => { observer.disconnect(); map.remove(); mapRef.current = null; };
     };
+
+    if ((window as any).L) {
+      loadMap();
+    } else {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.async = true;
+      script.onload = loadMap;
+      document.body.appendChild(script);
+    }
   }, []);
 
   const initMap = useCallback(() => {}, []);
 
   // ── Círculo de área ─────────────────────────────────────────────────────
   useEffect(() => {
-    if (!mapRef.current || !leafletRef.current || !center) return;
-    const L = leafletRef.current;
+    if (!mapRef.current || !(window as any).L || !center) return;
+    const L = (window as any).L;
     const map = mapRef.current;
     if (circleRef.current) circleRef.current.remove();
     if (centerMarkerRef.current) centerMarkerRef.current.remove();
@@ -128,8 +145,8 @@ const MapSearch: React.FC = () => {
 
   // ── Marcadores de resultados ────────────────────────────────────────────
   const renderMarkers = useCallback((items: MapSearchResult[], currentActiveId: string | null) => {
-    if (!mapRef.current || !leafletRef.current) return;
-    const L = leafletRef.current;
+    if (!mapRef.current || !(window as any).L) return;
+    const L = (window as any).L;
     const map = mapRef.current;
     resultMarkersRef.current.forEach((m) => m.remove());
     resultMarkersRef.current = [];
