@@ -3,13 +3,14 @@ import {
   MapPin, Search, Loader2, Phone, Globe, ExternalLink,
   AlertTriangle, CheckCircle2, Star, X, Copy, Check,
   Download, Trash2, PlusCircle, Target, Navigation,
-  SlidersHorizontal, BrainCircuit, Mail, Sparkles,
+  SlidersHorizontal, BrainCircuit, Mail, Sparkles, FolderOpen, Save,
   ChevronLeft, ChevronRight, Mic, MicOff, Route,
   Filter, FileText, Map, Briefcase, Circle,
 } from 'lucide-react';
 import { BusinessData, ScraperSettings } from '../types';
 import { enrichLeadsWithAI } from '../lib/ai';
 import EmailModal from './EmailModal';
+import SessionManager, { Session, SessionLead, loadSessions, saveSessions } from './SessionManager';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type VisitStatus = 'nuevo' | 'contactado' | 'interesado' | 'cerrado' | 'rechazado';
@@ -331,6 +332,7 @@ const MapSearch: React.FC = () => {
   const [lastCenter, setLastCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [lastKeyword, setLastKeyword] = useState('');
   const [emailModalLead, setEmailModalLead] = useState<BusinessData | null>(null);
+  const [showSessionManager, setShowSessionManager] = useState(false);
   const [crmData, setCrmData] = useState<Record<string, CRMEntry>>(loadCRM);
 
   // Modo Campo
@@ -630,6 +632,14 @@ const MapSearch: React.FC = () => {
     setActiveId(id);
   };
 
+  // ── Cargar sesión ──────────────────────────────────────────────────────────
+  const handleLoadSession = (leads: SessionLead[]) => {
+    const mapped = leads.map(l => ({ ...l } as MapSearchResult));
+    setResults(mapped);
+    setActiveId(null);
+    setSelectedIds(new Set());
+  };
+
   // ── Enriquecer con IA ───────────────────────────────────────────────────
   const handleAIEnrichment = async () => {
     setIsEnriching(true);
@@ -833,6 +843,10 @@ const MapSearch: React.FC = () => {
               className="w-full flex items-center justify-center gap-2 bg-slate-100 text-slate-700 py-3 rounded-2xl font-black text-sm hover:bg-slate-200 transition">
               <Navigation className="w-4 h-4" /> Usar mi ubicación
             </button>
+            <button type="button" onClick={() => setShowSessionManager(true)}
+              className="w-full flex items-center justify-center gap-2 bg-indigo-50 text-indigo-700 border-2 border-indigo-200 py-3 rounded-2xl font-black text-sm hover:bg-indigo-100 transition">
+              <FolderOpen className="w-4 h-4" /> Mis sesiones guardadas
+            </button>
 
             <button type="button" onClick={() => handleSearch(false)}
               disabled={isScraping || isEnriching || !center || !keyword.trim()}
@@ -937,6 +951,10 @@ const MapSearch: React.FC = () => {
                 <button onClick={exportPDF}
                   className="flex items-center gap-2 bg-orange-500 text-white px-4 py-3 rounded-2xl font-black text-sm hover:bg-orange-400 transition">
                   <FileText className="w-4 h-4" /> PDF
+                </button>
+                <button onClick={() => setShowSessionManager(true)}
+                  className="flex items-center gap-2 bg-indigo-50 text-indigo-700 border-2 border-indigo-200 px-4 py-3 rounded-2xl font-black text-sm hover:bg-indigo-100 transition">
+                  <Save className="w-4 h-4" /> Guardar sesión
                 </button>
                 {/* CSV */}
                 <button onClick={exportCSV}
@@ -1231,6 +1249,15 @@ const MapSearch: React.FC = () => {
       </div>
 
       {emailModalLead && <EmailModal lead={emailModalLead} onClose={() => setEmailModalLead(null)} />}
+      {showSessionManager && (
+        <SessionManager
+          currentLeads={resultsWithCRM as SessionLead[]}
+          currentKeyword={lastKeyword || keyword}
+          currentZone={center ? `${center.lat.toFixed(3)}, ${center.lng.toFixed(3)}` : ''}
+          onLoadSession={handleLoadSession}
+          onClose={() => setShowSessionManager(false)}
+        />
+      )}
     </>
   );
 };
