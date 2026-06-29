@@ -341,6 +341,9 @@ const MapSearch: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [filterPhone, setFilterPhone] = useState(false);
   const [filterWeb, setFilterWeb] = useState(false);
+  const [filterNoWeb, setFilterNoWeb] = useState(false);
+  const [filterSearch, setFilterSearch] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [filterScore, setFilterScore] = useState<string>('todos');
   const [filterStars, setFilterStars] = useState(0);
   const [filterCategory, setFilterCategory] = useState('todos');
@@ -358,6 +361,13 @@ const MapSearch: React.FC = () => {
   const filteredResults = resultsWithCRM.filter(r => {
     if (filterPhone && !r.phone) return false;
     if (filterWeb && !r.website) return false;
+    if (filterNoWeb && r.website) return false;
+    if (filterSearch.trim()) {
+      const q = filterSearch.toLowerCase();
+      const match = [r.name, r.address, r.categoryName, r.phone, r.email]
+        .filter(Boolean).join(' ').toLowerCase();
+      if (!match.includes(q)) return false;
+    }
     if (filterScore !== 'todos' && r.aiScore !== filterScore) return false;
     if (filterStars > 0 && parseFloat(String(r.stars || 0)) < filterStars) return false;
     if (filterCategory !== 'todos' && r.categoryName !== filterCategory) return false;
@@ -502,10 +512,25 @@ const MapSearch: React.FC = () => {
   useEffect(() => { renderMarkers(resultsWithCRM); }, [results, crmData]);
 
   // ── Ruta optimizada en Google Maps ──────────────────────────────────────
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => setSelectedIds(new Set(filteredResults.map(r => r._id)));
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const routeLeads = selectedIds.size > 0
+    ? filteredResults.filter(r => selectedIds.has(r._id))
+    : filteredResults;
+
   const openOptimizedRoute = () => {
-    const leadsWithCoords = filteredResults.filter(r => r.lat && r.lng);
+    const leadsWithCoords = routeLeads.filter(r => r.lat && r.lng);
     if (leadsWithCoords.length < 2) {
-      alert('Necesitas al menos 2 leads con coordenadas para trazar una ruta.');
+      alert('Necesitas al menos 2 leads con coordenadas para trazar una ruta. Prueba enriqueciendo con IA primero.');
       return;
     }
     const waypoints = leadsWithCoords.slice(1, -1).map(r => `${r.lat},${r.lng}`).join('|');
@@ -891,7 +916,8 @@ const MapSearch: React.FC = () => {
                 {/* Ruta */}
                 <button onClick={openOptimizedRoute}
                   className="flex items-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-2xl font-black text-sm hover:bg-blue-500 transition">
-                  <Route className="w-4 h-4" /> Ruta
+                  <Route className="w-4 h-4" />
+                  Ruta {selectedIds.size > 0 ? `(${selectedIds.size})` : `(${filteredResults.length})`}
                 </button>
                 {/* Enriquecer IA */}
                 <button onClick={handleAIEnrichment} disabled={isEnriching || isScraping}
@@ -903,7 +929,7 @@ const MapSearch: React.FC = () => {
                 <button onClick={() => setShowFilters(!showFilters)}
                   className={`flex items-center gap-2 px-4 py-3 rounded-2xl font-black text-sm transition border-2 ${showFilters ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300'}`}>
                   <Filter className="w-4 h-4" /> Filtros
-                  {(filterPhone||filterWeb||filterScore!=='todos'||filterStars>0||filterCategory!=='todos'||filterStatus!=='todos') && (
+                  {(filterPhone||filterWeb||filterNoWeb||filterSearch||filterScore!=='todos'||filterStars>0||filterCategory!=='todos'||filterStatus!=='todos') && (
                     <span className="bg-red-500 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-black">!</span>
                   )}
                 </button>
@@ -918,6 +944,16 @@ const MapSearch: React.FC = () => {
                   <Download className="w-4 h-4" /> CSV
                 </button>
                 {/* Limpiar */}
+                {selectedIds.size > 0
+                  ? <button onClick={clearSelection}
+                      className="flex items-center gap-2 bg-blue-50 text-blue-600 border border-blue-200 px-4 py-3 rounded-2xl font-black text-sm hover:bg-blue-100 transition">
+                      <X className="w-4 h-4" /> Quitar selección ({selectedIds.size})
+                    </button>
+                  : <button onClick={selectAll}
+                      className="flex items-center gap-2 bg-slate-100 text-slate-600 border border-slate-200 px-4 py-3 rounded-2xl font-black text-sm hover:bg-slate-200 transition">
+                      <CheckCircle2 className="w-4 h-4" /> Seleccionar todos
+                    </button>
+                }
                 <button onClick={clearAll}
                   className="flex items-center gap-2 bg-rose-50 text-rose-600 border border-rose-200 px-4 py-3 rounded-2xl font-black text-sm hover:bg-rose-100 transition">
                   <Trash2 className="w-4 h-4" />
@@ -931,7 +967,25 @@ const MapSearch: React.FC = () => {
                 <p className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                   <Filter className="w-3.5 h-3.5 text-indigo-500" /> Filtros inteligentes
                 </p>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                {/* Campo de búsqueda editable */}
+                <div className="mb-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Buscar en resultados: nombre, dirección, teléfono…"
+                      value={filterSearch}
+                      onChange={e => setFilterSearch(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-semibold text-slate-700 outline-none focus:border-indigo-200 focus:bg-white transition"
+                    />
+                    {filterSearch && (
+                      <button onClick={() => setFilterSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={filterPhone} onChange={e => setFilterPhone(e.target.checked)} className="accent-indigo-600 w-4 h-4" />
                     <span className="text-xs font-black text-slate-700">Con teléfono</span>
@@ -939,6 +993,10 @@ const MapSearch: React.FC = () => {
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={filterWeb} onChange={e => setFilterWeb(e.target.checked)} className="accent-indigo-600 w-4 h-4" />
                     <span className="text-xs font-black text-slate-700">Con web</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer bg-orange-50 border-2 border-orange-200 px-3 py-2 rounded-xl transition hover:bg-orange-100" style={{cursor:'pointer'}}>
+                    <input type="checkbox" checked={filterNoWeb} onChange={e => { setFilterNoWeb(e.target.checked); if(e.target.checked) setFilterWeb(false); }} className="accent-orange-500 w-4 h-4" />
+                    <span className="text-xs font-black text-orange-700">🚫 Sin página web</span>
                   </label>
                   <div>
                     <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Score IA</p>
@@ -974,7 +1032,7 @@ const MapSearch: React.FC = () => {
                     </select>
                   </div>
                 </div>
-                <button onClick={() => { setFilterPhone(false); setFilterWeb(false); setFilterScore('todos'); setFilterStars(0); setFilterCategory('todos'); setFilterStatus('todos'); }}
+                <button onClick={() => { setFilterPhone(false); setFilterWeb(false); setFilterNoWeb(false); setFilterSearch(''); setFilterScore('todos'); setFilterStars(0); setFilterCategory('todos'); setFilterStatus('todos'); }}
                   className="text-xs font-black text-rose-500 hover:text-rose-700 transition">
                   ✕ Limpiar filtros
                 </button>
@@ -1002,9 +1060,17 @@ const MapSearch: React.FC = () => {
                       {/* Header card */}
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xs font-black shadow shrink-0">
-                            {idx + 1}
-                          </div>
+                          {/* Checkbox de selección para ruta */}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleSelect(item._id); }}
+                            className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shadow shrink-0 border-2 transition-all ${
+                              selectedIds.has(item._id)
+                                ? 'bg-blue-600 text-white border-blue-600'
+                                : 'bg-white text-slate-400 border-slate-300 hover:border-blue-400'
+                            }`}
+                            title={selectedIds.has(item._id) ? 'Quitar de ruta' : 'Añadir a ruta'}>
+                            {selectedIds.has(item._id) ? <Check className="w-3.5 h-3.5" /> : <span>{idx + 1}</span>}
+                          </button>
                           <span className="text-[10px] font-black px-2 py-1 rounded-xl border"
                             style={{ background: cfg.bg, color: cfg.color, borderColor: cfg.border }}>
                             {cfg.emoji} {cfg.label}
