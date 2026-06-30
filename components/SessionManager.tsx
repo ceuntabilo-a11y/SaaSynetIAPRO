@@ -210,8 +210,17 @@ const SessionManager: React.FC<SessionManagerProps> = ({
   };
 
   // ─── Render ────────────────────────────────────────────────────────────────
+  // Suppress leaflet z-index while modal is open
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.id = 'session-modal-fix';
+    style.textContent = `.leaflet-pane, .leaflet-top, .leaflet-bottom { z-index: 1 !important; }`;
+    document.head.appendChild(style);
+    return () => { document.getElementById('session-modal-fix')?.remove(); };
+  }, []);
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start justify-center pt-6 px-4 pb-4 overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-start justify-center pt-6 px-4 pb-4 overflow-y-auto">
       <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-3xl">
 
         {/* Header */}

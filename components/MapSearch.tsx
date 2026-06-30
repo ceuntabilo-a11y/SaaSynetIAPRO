@@ -155,8 +155,16 @@ const FieldMode: React.FC<FieldModeProps> = ({ leads, initialIndex, onClose, onU
 
   const cfg = STATUS_CONFIG[status];
 
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.id = 'field-mode-fix';
+    style.textContent = `.leaflet-pane, .leaflet-top, .leaflet-bottom { z-index: 1 !important; }`;
+    document.head.appendChild(style);
+    return () => { document.getElementById('field-mode-fix')?.remove(); };
+  }, []);
+
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900 flex flex-col" style={{ touchAction: 'pan-y' }}>
+    <div className="fixed inset-0 z-[9999] bg-slate-900 flex flex-col" style={{ touchAction: 'pan-y' }}>
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-6 pb-4 border-b border-slate-700">
         <button onClick={onClose} className="text-slate-400 hover:text-white transition">
@@ -865,7 +873,7 @@ const MapSearch: React.FC = () => {
                   <span className="font-bold text-sm">Cargando mapa…</span>
                 </div>
               )}
-              <div ref={mapElRef} style={{ height: '100%', width: '100%', visibility: mapReady ? 'visible' : 'hidden' }} />
+              <div ref={mapElRef} style={{ height: '100%', width: '100%', visibility: mapReady ? 'visible' : 'hidden', zIndex: 1 }} />
             </div>
             {!center && mapReady && (
               <p className="text-center text-xs text-slate-400 font-bold flex items-center justify-center gap-1">
